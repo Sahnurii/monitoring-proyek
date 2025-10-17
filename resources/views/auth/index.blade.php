@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Autentikasi | {{ config('app.name', 'Monitoring Proyek') }}</title>
+    <title>Autentikasi | {{ config('app.name', 'Sistem Informasi Manajemen Proyek dan Pengadaan Material pada CV. Agha Jaya Sakti') }}</title>
     @vite(['resources/sass/app.scss', 'resources/js/app.js'])
     <link rel="stylesheet"
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
@@ -12,12 +12,13 @@
         crossorigin="anonymous">
 </head>
 
-<body class="auth-body">
-    @php
-        $activeTab = session('auth_tab', 'login');
-        $registerErrors = $errors->getBag('register');
-        $resetErrors = $errors->getBag('reset');
-    @endphp
+@php
+    $activeTab = session('auth_tab', 'login');
+    $registerErrors = $errors->getBag('register');
+    $resetErrors = $errors->getBag('reset');
+@endphp
+
+<body class="auth-body" data-auth-active="{{ $activeTab }}">
     <main class="w-100">
         <div class="card auth-card shadow-lg border-0 overflow-hidden mx-auto">
             <div class="row g-0">
@@ -26,7 +27,7 @@
                         <div class="auth-brand-icon d-flex align-items-center justify-content-center mb-4">
                             <span class="fs-4 fw-semibold">MP</span>
                         </div>
-                        <h2 class="fw-bold mb-3">Sistem Informasi Monitoring Proyek</h2>
+                        <h2 class="fw-bold mb-3">Sistem Informasi Manajemen Proyek dan Pengadaan Material</h2>
                         <p class="text-white-50 mb-4">
                             Kelola proyek, pantau progres, dan kolaborasi dengan tim lebih efektif melalui satu dashboard
                             terpadu.
@@ -47,7 +48,7 @@
                         </ul>
                     </div>
                     <div class="auth-help small">
-                        &copy; {{ now()->year }} {{ config('app.name', 'Monitoring Proyek') }}. Semua hak dilindungi.
+                        &copy; {{ now()->year }} {{ config('app.name', 'Sistem Informasi Manajemen Proyek dan Pengadaan Material pada CV. Agha Jaya Sakti') }}. Semua hak dilindungi.
                     </div>
                 </div>
                 <div class="col-lg-7 p-4 p-lg-5 bg-white">
@@ -274,45 +275,6 @@
         </div>
     </main>
 
-    <script>
-        (() => {
-            const forms = document.querySelectorAll('.needs-validation');
-            Array.from(forms).forEach(form => {
-                form.addEventListener('submit', event => {
-                    if (!form.checkValidity()) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                    }
-                    form.classList.add('was-validated');
-                }, false);
-            });
-
-            const toggleButtons = document.querySelectorAll('[data-toggle-password]');
-            toggleButtons.forEach(button => {
-                button.addEventListener('click', () => {
-                    const targetId = button.getAttribute('data-toggle-password');
-                    const target = document.getElementById(targetId);
-                    if (!target) {
-                        return;
-                    }
-                    const currentType = target.getAttribute('type');
-                    target.setAttribute('type', currentType === 'password' ? 'text' : 'password');
-                    const icon = button.querySelector('i');
-                    if (icon) {
-                        icon.classList.toggle('bi-eye');
-                        icon.classList.toggle('bi-eye-slash');
-                    }
-                });
-            });
-
-            const activeTab = @json($activeTab);
-            const trigger = document.querySelector(`[data-bs-target="#${activeTab}"]`);
-            if (trigger) {
-                const tab = bootstrap.Tab.getOrCreateInstance(trigger);
-                tab.show();
-            }
-        })();
-    </script>
 </body>
 
 </html>

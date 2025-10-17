@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'name' => env('APP_NAME', 'Laravel'),
+    'name' => env('APP_NAME', 'Sistem Informasi Manajemen Proyek dan Pengadaan Material pada CV. Agha Jaya Sakti'),
 
     /*
     |--------------------------------------------------------------------------

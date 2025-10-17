@@ -1,0 +1,106 @@
+export const sidebarMenu = {
+  admin: [
+    { label: "Dashboard", icon: "layout-dashboard", route: "dashboard" },
+    {
+      label: "Transaksi",
+      icon: "folder",
+      children: [
+        { label: "Material Request (MR)", route: "mr.index" },
+        { label: "Purchase Order (PO)", route: "po.index" },
+        { label: "Goods Receipt (GR)", route: "gr.index" },
+        { label: "Goods Issue (GI)", route: "gi.index" }
+      ]
+    },
+    {
+      label: "Master Data",
+      icon: "database",
+      children: [
+        { label: "Material", route: "materials.index" },
+        { label: "Satuan", route: "units.index" },
+        { label: "Supplier", route: "suppliers.index" },
+        { label: "Proyek", route: "projects.index" }
+      ]
+    },
+    {
+      label: "Persediaan",
+      icon: "box",
+      children: [
+        { label: "Stok Material", route: "reports.inventory" },
+        { label: "Mutasi Stok", route: "stock.transfer" }
+      ]
+    },
+    {
+      label: "Laporan",
+      icon: "file-text",
+      children: [
+        { label: "Data Proyek", route: "reports.project" },
+        { label: "Pengadaan (PO)", route: "reports.procurement" },
+        { label: "Stok & Kartu Stok", route: "reports.inventory" },
+        { label: "Pengeluaran ke Proyek", route: "reports.project" },
+        { label: "Data Supplier", route: "reports.supplier" }
+      ]
+    },
+    {
+      label: "Pengguna & Role",
+      icon: "users",
+      children: [
+        { label: "Manajemen Pengguna", route: "users.index" },
+        { label: "Manajemen Role", route: "roles.index" }
+      ]
+    }
+  ],
+
+  manager: [
+    { label: "Dashboard", icon: "layout-dashboard", route: "dashboard" },
+    {
+      label: "Transaksi",
+      icon: "folder",
+      children: [
+        { label: "Material Request (MR)", route: "mr.index" },
+        { label: "Purchase Order (PO)", route: "po.index" },
+        { label: "Goods Receipt (GR)", route: "gr.index" },
+        { label: "Goods Issue (GI)", route: "gi.index" }
+      ]
+    },
+    {
+      label: "Persediaan",
+      icon: "box",
+      children: [{ label: "Stok Material", route: "reports.inventory" }]
+    },
+    {
+      label: "Laporan",
+      icon: "file-text",
+      children: [
+        { label: "Laporan Pengadaan", route: "reports.procurement" },
+        { label: "Laporan Proyek", route: "reports.project" }
+      ]
+    }
+  ],
+
+  operator: [
+    { label: "Dashboard", icon: "layout-dashboard", route: "dashboard" },
+    {
+      label: "Transaksi",
+      icon: "folder",
+      children: [
+        { label: "Material Request (MR)", route: "mr.index" },
+        { label: "Purchase Order (PO)", route: "po.index" },
+        { label: "Goods Receipt (GR)", route: "gr.index" },
+        { label: "Goods Issue (GI)", route: "gi.index" }
+      ]
+    },
+    {
+      label: "Persediaan",
+      icon: "box",
+      children: [{ label: "Stok Material", route: "reports.inventory" }]
+    },
+    {
+      label: "Laporan",
+      icon: "file-text",
+      children: [
+        { label: "Laporan Pengadaan", route: "reports.procurement" },
+        { label: "Laporan Stok", route: "reports.inventory" }
+      ]
+    }
+  ]
+};
