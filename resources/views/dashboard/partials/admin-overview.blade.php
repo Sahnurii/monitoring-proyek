@@ -68,95 +68,97 @@
     ];
 @endphp
 
-<section class="dashboard-section mb-4">
-    <div class="card border-0 shadow-sm">
-        <div class="card-body p-4 p-xl-5">
-            <div class="d-flex flex-column flex-xl-row gap-4 align-items-start align-items-xl-center justify-content-between">
-                <div>
-                    <span class="badge text-bg-primary mb-3">Admin</span>
-                    <h1 class="h3 mb-2">Halo, {{ $user->name }}!</h1>
-                    <p class="text-muted mb-0">Kelola seluruh proses proyek dan pengadaan material dalam satu tempat terintegrasi.</p>
-                </div>
-                <div class="d-flex flex-wrap gap-2">
-                    <a class="btn btn-primary" href="#">Buat Permintaan Material</a>
-                    <a class="btn btn-outline-primary" href="#">Tambah Pesanan Pembelian</a>
-                    <a class="btn btn-outline-secondary" href="#">Unggah Penerimaan</a>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<section class="dashboard-section">
-    <div class="row g-4">
-        @foreach ($modules as $module)
-            <div class="col-xl-4 col-lg-6">
-                <div class="module-card h-100">
-                    <div class="module-card-header d-flex align-items-start justify-content-between gap-3">
-                        <div class="module-icon">
-                            <i class="bi bi-{{ $module['icon'] }}"></i>
-                        </div>
-                        <button class="btn btn-sm btn-outline-primary" type="button">Lihat Detail</button>
-                    </div>
-                    <div class="module-card-body">
-                        <h2 class="h5 mb-2">{{ $module['title'] }}</h2>
-                        <p class="text-muted mb-3">{{ $module['description'] }}</p>
-                        <div class="module-relations">
-                            <span class="module-relations-label">Relasi Utama</span>
-                            <ul class="module-relations-list">
-                                @foreach ($module['relations'] as $relation)
-                                    <li>{{ $relation }}</li>
-                                @endforeach
-                            </ul>
-                        </div>
-                    </div>
-                    <div class="module-card-footer">
-                        <button class="btn btn-link btn-sm px-0">Tambahkan data baru</button>
-                        <button class="btn btn-link btn-sm px-0">Import dari Excel</button>
-                    </div>
-                </div>
-            </div>
-        @endforeach
-    </div>
-</section>
-
-<section class="dashboard-section mt-4">
-    <div class="card border-0 shadow-sm">
-        <div class="card-body p-4">
-            <h2 class="h5 mb-3">Alur Kerja Terintegrasi</h2>
-            <div class="workflow-map">
-                <div class="workflow-step">
-                    <div class="workflow-badge bg-primary">1</div>
+<div class="container-fluid px-0 px-lg-3">
+    <section class="dashboard-section mb-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4 p-xl-5">
+                <div class="d-flex flex-column flex-xl-row gap-4 align-items-start align-items-xl-center justify-content-between">
                     <div>
-                        <h3 class="h6 mb-1">Permintaan Material</h3>
-                        <p class="text-muted small mb-0">Diajukan oleh proyek, diverifikasi oleh admin, lalu diteruskan ke pengadaan.</p>
+                        <span class="badge text-bg-primary mb-3">Admin</span>
+                        <h1 class="h3 mb-2">Halo, {{ $user->name }}!</h1>
+                        <p class="text-muted mb-0">Kelola seluruh proses proyek dan pengadaan material dalam satu tempat terintegrasi.</p>
                     </div>
-                </div>
-                <span class="workflow-separator"><i class="bi bi-arrow-right"></i></span>
-                <div class="workflow-step">
-                    <div class="workflow-badge bg-success">2</div>
-                    <div>
-                        <h3 class="h6 mb-1">Pesanan Pembelian</h3>
-                        <p class="text-muted small mb-0">Admin membuat PO, memilih supplier, dan mengatur jadwal pengiriman.</p>
-                    </div>
-                </div>
-                <span class="workflow-separator"><i class="bi bi-arrow-right"></i></span>
-                <div class="workflow-step">
-                    <div class="workflow-badge bg-info">3</div>
-                    <div>
-                        <h3 class="h6 mb-1">Penerimaan & Stok</h3>
-                        <p class="text-muted small mb-0">Barang diterima gudang, stok diperbarui, dan siap distribusi ke proyek.</p>
-                    </div>
-                </div>
-                <span class="workflow-separator"><i class="bi bi-arrow-right"></i></span>
-                <div class="workflow-step">
-                    <div class="workflow-badge bg-warning">4</div>
-                    <div>
-                        <h3 class="h6 mb-1">Pengeluaran Barang</h3>
-                        <p class="text-muted small mb-0">Material dikeluarkan ke proyek disertai bukti serah terima dan pelacakan.</p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a class="btn btn-primary" href="#">Buat Permintaan Material</a>
+                        <a class="btn btn-outline-primary" href="#">Tambah Pesanan Pembelian</a>
+                        <a class="btn btn-outline-secondary" href="#">Unggah Penerimaan</a>
                     </div>
                 </div>
             </div>
         </div>
-    </div>
-</section>
+    </section>
+
+    <section class="dashboard-section">
+        <div class="row g-4">
+            @foreach ($modules as $module)
+                <div class="col-xl-4 col-lg-6">
+                    <div class="module-card h-100">
+                        <div class="module-card-header d-flex align-items-start justify-content-between gap-3">
+                            <div class="module-icon">
+                                <i class="bi bi-{{ $module['icon'] }}"></i>
+                            </div>
+                            <button class="btn btn-sm btn-outline-primary" type="button">Lihat Detail</button>
+                        </div>
+                        <div class="module-card-body">
+                            <h2 class="h5 mb-2">{{ $module['title'] }}</h2>
+                            <p class="text-muted mb-3">{{ $module['description'] }}</p>
+                            <div class="module-relations">
+                                <span class="module-relations-label">Relasi Utama</span>
+                                <ul class="module-relations-list">
+                                    @foreach ($module['relations'] as $relation)
+                                        <li>{{ $relation }}</li>
+                                    @endforeach
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="module-card-footer">
+                            <button class="btn btn-link btn-sm px-0">Tambahkan data baru</button>
+                            <button class="btn btn-link btn-sm px-0">Import dari Excel</button>
+                        </div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+    </section>
+
+    <section class="dashboard-section mt-4">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body p-4">
+                <h2 class="h5 mb-3">Alur Kerja Terintegrasi</h2>
+                <div class="workflow-map">
+                    <div class="workflow-step">
+                        <div class="workflow-badge bg-primary">1</div>
+                        <div>
+                            <h3 class="h6 mb-1">Permintaan Material</h3>
+                            <p class="text-muted small mb-0">Diajukan oleh proyek, diverifikasi oleh admin, lalu diteruskan ke pengadaan.</p>
+                        </div>
+                    </div>
+                    <span class="workflow-separator"><i class="bi bi-arrow-right"></i></span>
+                    <div class="workflow-step">
+                        <div class="workflow-badge bg-success">2</div>
+                        <div>
+                            <h3 class="h6 mb-1">Pesanan Pembelian</h3>
+                            <p class="text-muted small mb-0">Admin membuat PO, memilih supplier, dan mengatur jadwal pengiriman.</p>
+                        </div>
+                    </div>
+                    <span class="workflow-separator"><i class="bi bi-arrow-right"></i></span>
+                    <div class="workflow-step">
+                        <div class="workflow-badge bg-info">3</div>
+                        <div>
+                            <h3 class="h6 mb-1">Penerimaan & Stok</h3>
+                            <p class="text-muted small mb-0">Barang diterima gudang, stok diperbarui, dan siap distribusi ke proyek.</p>
+                        </div>
+                    </div>
+                    <span class="workflow-separator"><i class="bi bi-arrow-right"></i></span>
+                    <div class="workflow-step">
+                        <div class="workflow-badge bg-warning">4</div>
+                        <div>
+                            <h3 class="h6 mb-1">Pengeluaran Barang</h3>
+                            <p class="text-muted small mb-0">Material dikeluarkan ke proyek disertai bukti serah terima dan pelacakan.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>

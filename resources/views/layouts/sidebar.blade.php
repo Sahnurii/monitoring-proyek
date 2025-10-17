@@ -127,6 +127,21 @@
     ];
 
     $menuItems = $menuConfig[$role] ?? $menuConfig['operator'];
+
+    $getRoutePatterns = function ($routeName) {
+        $patterns = [];
+
+        if ($routeName) {
+            $patterns[] = $routeName;
+            $patterns[] = $routeName . '.*';
+
+            if (\Illuminate\Support\Str::endsWith($routeName, '.index')) {
+                $patterns[] = \Illuminate\Support\Str::beforeLast($routeName, '.') . '.*';
+            }
+        }
+
+        return array_unique($patterns);
+    };
 @endphp
 
 <aside class="dashboard-sidebar" data-sidebar>
@@ -143,26 +158,30 @@
                 $hasChildren = !empty($item['children']);
                 $routeName = $item['route'] ?? null;
                 $resolvedIcon = $iconMap[$item['icon']] ?? 'dot';
-                $childRoutes = [];
+                $childRoutePatterns = [];
                 if ($hasChildren) {
                     foreach ($item['children'] as $childItem) {
                         if (!empty($childItem['route'])) {
-                            $childRoutes[] = $childItem['route'];
+                            $childRoutePatterns = array_merge(
+                                $childRoutePatterns,
+                                $getRoutePatterns($childItem['route'])
+                            );
                         }
                     }
+                    $childRoutePatterns = array_values(array_unique($childRoutePatterns));
                 }
+
                 $isActive = false;
-
-                if ($routeName) {
-                    $isActive = request()->routeIs($routeName) || request()->routeIs($routeName . '.*');
+                foreach ($getRoutePatterns($routeName) as $pattern) {
+                    if (request()->routeIs($pattern)) {
+                        $isActive = true;
+                        break;
+                    }
                 }
 
-                if ($hasChildren) {
-                    foreach ($childRoutes as $childRoute) {
-                        if (
-                            $childRoute &&
-                            (request()->routeIs($childRoute) || request()->routeIs($childRoute . '.*'))
-                        ) {
+                if (!$isActive && $hasChildren) {
+                    foreach ($childRoutePatterns as $pattern) {
+                        if ($pattern && request()->routeIs($pattern)) {
                             $isActive = true;
                             break;
                         }
@@ -192,9 +211,11 @@
                                 @php
                                     $childRoute = $child['route'] ?? null;
                                     $childActive = false;
-                                    if ($childRoute) {
-                                        $childActive =
-                                            request()->routeIs($childRoute) || request()->routeIs($childRoute . '.*');
+                                    foreach ($getRoutePatterns($childRoute) as $pattern) {
+                                        if ($pattern && request()->routeIs($pattern)) {
+                                            $childActive = true;
+                                            break;
+                                        }
                                     }
                                     $childHref = '#';
                                     if ($childRoute && \Illuminate\Support\Facades\Route::has($childRoute)) {

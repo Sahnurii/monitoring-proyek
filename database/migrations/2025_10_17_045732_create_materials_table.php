@@ -11,11 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('units', function (Blueprint $t) {
+        Schema::create('materials', function (Blueprint $t) {
             $t->id();
-            $t->string('name');
-            $t->string('symbol', 20);
+            $t->string('sku')->unique();
+            $t->string('name')->index();
+            $t->foreignId('unit_id')->constrained('units');
+            $t->decimal('min_stock', 18, 2)->default(0);
             $t->timestamps();
+            $t->softDeletes();
         });
     }
 
@@ -24,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('units');
+        Schema::dropIfExists('materials');
     }
 };

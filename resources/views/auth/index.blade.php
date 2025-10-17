@@ -6,10 +6,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Autentikasi | {{ config('app.name', 'Sistem Informasi Manajemen Proyek dan Pengadaan Material pada CV. Agha Jaya Sakti') }}</title>
     @vite(['resources/sass/app.scss', 'resources/js/app.js'])
-    <link rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
-        integrity="sha384-+9IeAxzFvtJyX6+JsiuyanNqcyQ8Gcq/V5j1IHpF3N99ElfpZMlA4iAcFE9Z9Xjw"
-        crossorigin="anonymous">
 </head>
 
 @php

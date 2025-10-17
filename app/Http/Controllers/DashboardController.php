@@ -24,7 +24,7 @@ class DashboardController extends Controller
 
     protected function render(string $title): View
     {
-        return view('dashboard.base', [
+        return view('dashboard.index', [
             'title' => $title,
             'user' => Auth::user(),
         ]);

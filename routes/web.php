@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Master\MaterialController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -36,3 +37,5 @@ Route::middleware('auth')->get('/dashboard', function () {
         default => 'dashboard.operator',
     });
 })->name('dashboard');
+
+Route::middleware('auth')->resource('materials', MaterialController::class);

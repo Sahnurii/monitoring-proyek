@@ -6,6 +6,7 @@
 
 // Bootstrap
 @import 'bootstrap/scss/bootstrap';
+@import 'bootstrap-icons/font/bootstrap-icons.css';
 
 .auth-body {
     min-height: 100vh;
@@ -429,7 +430,7 @@
     .dashboard-sidebar {
         position: sticky;
         top: 0;
-        height: 100vh;
+        min-height: 100vh;
         transform: none;
         flex: 0 0 260px;
     }
