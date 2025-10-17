@@ -1,0 +1,54 @@
+// Fonts
+@import url('https://fonts.bunny.net/css?family=Nunito');
+
+// Variables
+@import 'variables';
+
+// Bootstrap
+@import 'bootstrap/scss/bootstrap';
+
+.auth-body {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0d6efd 0%, #6610f2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+}
+
+.auth-card {
+    max-width: 960px;
+    width: 100%;
+    border-radius: 1.5rem;
+}
+
+.auth-brand-column {
+    background: linear-gradient(160deg, rgba(13, 110, 253, 0.92), rgba(102, 16, 242, 0.92));
+    color: #fff;
+}
+
+.auth-brand-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.auth-nav .nav-link {
+    border-radius: 999px;
+    font-weight: 600;
+    padding: 0.5rem 1.5rem;
+}
+
+.auth-nav .nav-link.active {
+    background: linear-gradient(135deg, #0d6efd, #6610f2);
+}
+
+.form-control:focus {
+    border-color: #6610f2;
+    box-shadow: 0 0 0 0.25rem rgba(102, 16, 242, 0.25);
+}
+
+.auth-help {
+    color: rgba(255, 255, 255, 0.65);
+}
