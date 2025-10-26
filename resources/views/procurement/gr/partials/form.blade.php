@@ -34,15 +34,16 @@
         : now()->format('Y-m-d');
     $defaultReceivedDate = old('received_date', $defaultReceivedDate);
 
-    $currentStatus = old('status', $receipt->status ?? 'draft');
-    $selectedPurchaseOrderId = old('purchase_order_id', $receipt->purchase_order_id ?? null);
+    $currentStatus = old('status', optional($receipt)->status ?? 'draft');
+    $purchaseOrder = optional($receipt)->purchaseOrder;
+    $selectedPurchaseOrderId = old('purchase_order_id', optional($receipt)->purchase_order_id);
     $selectedProjectId = old(
         'project_id',
-        $receipt->project_id ?? optional($receipt->purchaseOrder)->project_id ?? null,
+        optional($receipt)->project_id ?? optional($purchaseOrder)->project_id,
     );
     $selectedSupplierId = old(
         'supplier_id',
-        $receipt->supplier_id ?? optional($receipt->purchaseOrder)->supplier_id ?? null,
+        optional($receipt)->supplier_id ?? optional($purchaseOrder)->supplier_id,
     );
 
     $verifierOptions = collect($verifiers ?? []);

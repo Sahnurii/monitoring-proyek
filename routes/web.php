@@ -10,6 +10,7 @@ use App\Http\Controllers\Procurement\GoodsReceiptController;
 use App\Http\Controllers\Procurement\MaterialRequestController;
 use App\Http\Controllers\Procurement\PurchaseOrderController;
 use App\Http\Controllers\Project\ProjectController;
+use App\Http\Controllers\Supply\MaterialStockController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 
@@ -58,4 +59,11 @@ Route::middleware('auth')->group(function () {
         ->names('procurement.goods-receipts');
     Route::resource('procurement/goods-issues', GoodsIssueController::class)
         ->names('procurement.goods-issues');
+    route::resource('supply/material-stock', MaterialStockController::class)
+        ->names('supply.material-stock');
+
+
+    // Route::get('supply/material-stock', [MaterialStockController::class, 'index'])
+    //     ->middleware('role:operator')
+    //     ->name('supply.material-stock.index');
 });

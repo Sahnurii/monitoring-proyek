@@ -8,6 +8,8 @@
         {{ trim(($pageTitle = $title ?? '') !== '' ? $pageTitle . ' | ' : '') }}
         {{ config('app.name', 'Sistem Informasi Manajemen Proyek dan Pengadaan Material pada CV. Agha Jaya Sakti') }}
     </title>
+    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link href="https://fonts.bunny.net/css?family=Nunito" rel="stylesheet">
     @vite(['resources/sass/app.scss', 'resources/js/app.js'])
     @stack('styles')
 </head>

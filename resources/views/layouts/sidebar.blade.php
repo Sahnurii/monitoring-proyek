@@ -40,7 +40,7 @@
                 'label' => 'Persediaan',
                 'icon' => 'box',
                 'children' => [
-                    ['label' => 'Stok Material', 'route' => 'reports.inventory'],
+                    ['label' => 'Stok Material', 'route' => 'supply.material-stock.index'],
                     ['label' => 'Mutasi Stok', 'route' => 'stock.transfer'],
                 ],
             ],
@@ -83,7 +83,7 @@
             [
                 'label' => 'Persediaan',
                 'icon' => 'box',
-                'children' => [['label' => 'Stok Material', 'route' => 'reports.inventory']],
+                'children' => [['label' => 'Stok Material', 'route' => 'supply.material-stock.index']],
             ],
             [
                 'label' => 'Laporan',
