@@ -9,6 +9,7 @@ use App\Models\Project;
 use App\Models\PurchaseOrder;
 use App\Models\Supplier;
 use App\Models\User;
+use App\Services\Inventory\StockMovementService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,6 +27,10 @@ class GoodsReceiptController extends Controller
         'completed' => 'Selesai',
         'returned' => 'Diretur',
     ];
+
+    public function __construct(private StockMovementService $stockMovements)
+    {
+    }
 
     public function index(Request $request): View
     {
@@ -119,7 +124,12 @@ class GoodsReceiptController extends Controller
     public function create(): View
     {
         return view('procurement.gr.create', [
-            'purchaseOrders' => PurchaseOrder::orderByDesc('order_date')->orderBy('code')->get(['id', 'code']),
+            'purchaseOrders' => PurchaseOrder::with([
+                'items' => fn ($query) => $query->select('id', 'purchase_order_id', 'material_id', 'qty'),
+            ])
+                ->orderByDesc('order_date')
+                ->orderBy('code')
+                ->get(['id', 'code', 'project_id', 'supplier_id']),
             'projects' => Project::orderBy('name')->get(['id', 'name', 'code']),
             'suppliers' => Supplier::orderBy('name')->get(['id', 'name', 'email']),
             'materials' => Material::with('unit')->orderBy('name')->get(),
@@ -156,9 +166,14 @@ class GoodsReceiptController extends Controller
             $attributes['verified_at'] = null;
         }
 
-        $goodsReceipt = DB::transaction(function () use ($attributes, $items) {
+        $actorId = Auth::id();
+
+        $goodsReceipt = DB::transaction(function () use ($attributes, $items, $actorId) {
             $receipt = GoodsReceipt::create($attributes);
-            $receipt->items()->createMany($items);
+            $createdItems = $receipt->items()->createMany($items);
+            $receipt->setRelation('items', collect($createdItems));
+
+            $this->stockMovements->syncGoodsReceipt($receipt, $actorId);
 
             return $receipt;
         });
@@ -195,7 +210,12 @@ class GoodsReceiptController extends Controller
 
         return view('procurement.gr.edit', [
             'goodsReceipt' => $goodsReceipt,
-            'purchaseOrders' => PurchaseOrder::orderByDesc('order_date')->orderBy('code')->get(['id', 'code']),
+            'purchaseOrders' => PurchaseOrder::with([
+                'items' => fn ($query) => $query->select('id', 'purchase_order_id', 'material_id', 'qty'),
+            ])
+                ->orderByDesc('order_date')
+                ->orderBy('code')
+                ->get(['id', 'code', 'project_id', 'supplier_id']),
             'projects' => Project::orderBy('name')->get(['id', 'name', 'code']),
             'suppliers' => Supplier::orderBy('name')->get(['id', 'name', 'email']),
             'materials' => Material::with('unit')->orderBy('name')->get(),
@@ -231,10 +251,17 @@ class GoodsReceiptController extends Controller
             $attributes['verified_at'] = null;
         }
 
-        DB::transaction(function () use ($goodsReceipt, $attributes, $items) {
+        $actorId = Auth::id();
+
+        DB::transaction(function () use ($goodsReceipt, $attributes, $items, $actorId) {
+            $this->stockMovements->purgeGoodsReceipt($goodsReceipt);
+
             $goodsReceipt->update($attributes);
             $goodsReceipt->items()->delete();
-            $goodsReceipt->items()->createMany($items);
+            $createdItems = $goodsReceipt->items()->createMany($items);
+            $goodsReceipt->setRelation('items', collect($createdItems));
+
+            $this->stockMovements->syncGoodsReceipt($goodsReceipt, $actorId);
         });
 
         return redirect()
@@ -245,6 +272,7 @@ class GoodsReceiptController extends Controller
     public function destroy(GoodsReceipt $goodsReceipt): RedirectResponse
     {
         DB::transaction(function () use ($goodsReceipt) {
+            $this->stockMovements->purgeGoodsReceipt($goodsReceipt);
             $goodsReceipt->items()->delete();
             $goodsReceipt->delete();
         });

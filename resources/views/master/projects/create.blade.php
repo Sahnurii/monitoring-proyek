@@ -33,12 +33,9 @@
 
                     <div class="col-md-6">
                         <label for="code" class="form-label">Kode Proyek</label>
-                        <input type="text" id="code" name="code" value="{{ old('code') }}"
-                            class="form-control @error('code') is-invalid @enderror" placeholder="Contoh: PRJ-001"
-                            required>
-                        @error('code')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
+                        <input type="text" id="code" class="form-control"
+                            value="Akan dihasilkan otomatis saat penyimpanan" disabled>
+                        <div class="form-text">Kode mengikuti urutan otomatis dengan awalan PRJ-.</div>
                     </div>
 
                     <div class="col-md-6">

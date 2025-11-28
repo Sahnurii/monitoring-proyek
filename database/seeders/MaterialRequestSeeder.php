@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Models\MaterialRequest;
 use App\Models\Project;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\DB;
 
 class MaterialRequestSeeder extends Seeder
 {
@@ -79,8 +79,8 @@ class MaterialRequestSeeder extends Seeder
                 ? ($usersByEmail[$request['approved_email']] ?? null)
                 : null;
 
-            DB::table('material_requests')->updateOrInsert(
-                ['code' => $request['code']],
+            MaterialRequest::updateOrCreate(
+                ['code' => $request['code'] ?? MaterialRequest::generateNextCode()],
                 [
                     'project_id' => $projectId,
                     'requested_by' => $requestedBy,
@@ -89,8 +89,6 @@ class MaterialRequestSeeder extends Seeder
                     'notes' => $request['notes'],
                     'approved_by' => $approvedBy,
                     'approved_at' => $request['approved_at'],
-                    'created_at' => now(),
-                    'updated_at' => now(),
                 ]
             );
         }

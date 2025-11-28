@@ -115,12 +115,6 @@ class ProjectController extends Controller
         $statuses = array_keys(self::STATUS_OPTIONS);
 
         return $request->validate([
-            'code' => [
-                'required',
-                'string',
-                'max:50',
-                Rule::unique('projects', 'code')->ignore($project?->getKey()),
-            ],
             'name' => ['required', 'string', 'max:255'],
             'client' => ['nullable', 'string', 'max:255'],
             'location' => ['nullable', 'string', 'max:255'],

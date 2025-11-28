@@ -112,6 +112,7 @@
                                 <th scope="col">Tanggal</th>
                                 <th scope="col">Status</th>
                                 <th scope="col" class="text-center">Jumlah Item</th>
+                                <th scope="col" class="text-end">Total Harga</th>
                                 <th scope="col" class="text-end" style="width: 150px;">Aksi</th>
                             </tr>
                         </thead>
@@ -149,6 +150,9 @@
                                         <span class="fw-semibold">{{ $requestItem->items_count ?? 0 }}</span>
                                     </td>
                                     <td class="text-end">
+                                        <span class="fw-semibold">Rp {{ number_format((float) $requestItem->total_amount, 2, ',', '.') }}</span>
+                                    </td>
+                                    <td class="text-end">
                                         <div class="btn-group" role="group" aria-label="Aksi Permintaan">
                                             <a href="{{ route('procurement.material-requests.show', $requestItem) }}"
                                                 class="btn btn-sm btn-outline-secondary" title="Detail">
@@ -172,7 +176,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="text-center py-5">
+                                    <td colspan="9" class="text-center py-5">
                                         <i class="bi bi-box-seam text-muted display-5 d-block mb-3"></i>
                                         <p class="mb-1 fw-semibold">Belum ada permintaan material</p>
                                         <p class="text-muted mb-3">Tambahkan permintaan baru untuk memulai proses pengadaan.</p>

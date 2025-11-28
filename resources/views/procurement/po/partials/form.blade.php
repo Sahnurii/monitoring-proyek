@@ -23,6 +23,27 @@
     $defaultOrderDate = old('order_date', $defaultOrderDate);
     $currentStatus = old('status', $order->status ?? 'draft');
     $totalAmount = 0;
+    $materialRequestDataset = collect($materialRequests ?? [])
+        ->mapWithKeys(function ($requestOption) {
+            $items = collect(optional($requestOption)->items ?? []);
+
+            return [
+                $requestOption->id => [
+                    'id' => $requestOption->id,
+                    'project_id' => $requestOption->project_id ?? null,
+                    'items' => $items
+                        ->map(function ($item) {
+                            return [
+                                'material_id' => $item->material_id ?? null,
+                                'qty' => $item->qty !== null ? (float) $item->qty : null,
+                                'remarks' => $item->remarks ?? null,
+                            ];
+                        })
+                        ->values(),
+                ],
+            ];
+        })
+        ->toArray();
 @endphp
 
 @if ($errors->any())
@@ -282,11 +303,19 @@
     @push('scripts')
         <script>
             document.addEventListener('DOMContentLoaded', () => {
+                const materialRequestsData = @json($materialRequestDataset);
+
                 document.querySelectorAll('[data-po-items-container]').forEach((container) => {
                     const tableBody = container.querySelector('[data-items-body]');
                     const template = container.querySelector('#po-item-row-template');
                     const totalElement = container.querySelector('[data-total-amount]');
                     let nextIndex = Number(container.getAttribute('data-next-index')) || tableBody.children.length;
+                    const materialRequestSelect = container.querySelector('#material_request_id');
+                    const projectSelect = container.querySelector('#project_id');
+
+                    if (!tableBody) {
+                        return;
+                    }
 
                     const currencyFormatter = new Intl.NumberFormat('id-ID', {
                         minimumFractionDigits: 2,
@@ -294,6 +323,23 @@
                     });
 
                     const formatCurrency = (value) => `Rp ${currencyFormatter.format(value ?? 0)}`;
+
+                    const updateNextIndex = (value) => {
+                        nextIndex = value;
+                        container.setAttribute('data-next-index', String(nextIndex));
+                    };
+
+                    const setSelectValue = (select, value) => {
+                        if (!select) {
+                            return;
+                        }
+
+                        const normalized = value === null || value === undefined || value === '' ? '' : String(value);
+                        if (select.value !== normalized) {
+                            select.value = normalized;
+                            select.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                    };
 
                     const recalcRow = (row) => {
                         const qtyField = row.querySelector('[data-field="qty"]');
@@ -356,11 +402,52 @@
                         }
 
                         tableBody.appendChild(row);
-                        nextIndex += 1;
-                        container.setAttribute('data-next-index', String(nextIndex));
+                        updateNextIndex(nextIndex + 1);
 
                         recalcRow(row);
                         recalcTotals();
+
+                        return row;
+                    };
+
+                    const clearItems = () => {
+                        tableBody.innerHTML = '';
+                        updateNextIndex(0);
+                    };
+
+                    const populateFromMaterialRequest = (request) => {
+                        if (!request) {
+                            return;
+                        }
+
+                        const items = Array.isArray(request.items) ? request.items : [];
+
+                        clearItems();
+
+                        if (items.length === 0) {
+                            addRow();
+                            return;
+                        }
+
+                        items.forEach((item) => {
+                            addRow({
+                                material_id: item.material_id ?? null,
+                                qty: item.qty ?? null,
+                                price: null,
+                            });
+                        });
+                    };
+
+                    const hasFilledItems = () => {
+                        return Array.from(tableBody.querySelectorAll('tr')).some((row) => {
+                            const materialField = row.querySelector('[data-field="material_id"]');
+                            const qtyField = row.querySelector('[data-field="qty"]');
+                            const priceField = row.querySelector('[data-field="price"]');
+
+                            return (materialField && materialField.value) ||
+                                (qtyField && qtyField.value) ||
+                                (priceField && priceField.value);
+                        });
                     };
 
                     tableBody.addEventListener('click', (event) => {
@@ -400,6 +487,44 @@
                         addButton.addEventListener('click', () => {
                             addRow();
                         });
+                    }
+
+                    if (materialRequestSelect) {
+                        materialRequestSelect.addEventListener('change', () => {
+                            const selectedId = materialRequestSelect.value;
+                            if (!selectedId) {
+                                return;
+                            }
+
+                            const request = materialRequestsData[selectedId];
+                            if (!request) {
+                                return;
+                            }
+
+                            setSelectValue(projectSelect, request.project_id ?? '');
+
+                            if (Array.isArray(request.items) && request.items.length > 0) {
+                                if (hasFilledItems()) {
+                                    const confirmReplace = window.confirm(
+                                        'Mengambil item dari permintaan material akan menggantikan daftar item saat ini. Lanjutkan?'
+                                    );
+
+                                    if (!confirmReplace) {
+                                        return;
+                                    }
+                                }
+
+                                populateFromMaterialRequest(request);
+                            }
+                        });
+
+                        if (materialRequestSelect.value && !hasFilledItems()) {
+                            const initialRequest = materialRequestsData[materialRequestSelect.value];
+                            if (initialRequest) {
+                                setSelectValue(projectSelect, initialRequest.project_id ?? '');
+                                populateFromMaterialRequest(initialRequest);
+                            }
+                        }
                     }
 
                     tableBody.querySelectorAll('tr').forEach((row) => {

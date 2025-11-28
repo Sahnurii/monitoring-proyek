@@ -34,11 +34,8 @@
 
                     <div class="col-md-6">
                         <label for="code" class="form-label">Kode Proyek</label>
-                        <input type="text" id="code" name="code" value="{{ old('code', $project->code) }}"
-                            class="form-control @error('code') is-invalid @enderror" required>
-                        @error('code')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
+                        <input type="text" id="code" class="form-control" value="{{ $project->code }}" disabled>
+                        <div class="form-text">Kode dibuat otomatis dan tidak dapat diubah.</div>
                     </div>
 
                     <div class="col-md-6">

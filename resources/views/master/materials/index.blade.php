@@ -80,6 +80,7 @@
                                 <th scope="col">Nama Material</th>
                                 <th scope="col">Satuan</th>
                                 <th scope="col" class="text-center">Stok Minimal</th>
+                                <th scope="col" class="text-end">Harga Per Unit</th>
                                 <th scope="col">Dibuat</th>
                                 <th scope="col">Diperbarui</th>
                                 <th scope="col" class="text-end" style="width: 150px;">Aksi</th>
@@ -111,6 +112,11 @@
                                     <td class="text-center">
                                         <span class="fw-semibold">
                                             {{ number_format($material->min_stock ?? 0, 2, ',', '.') }}
+                                        </span>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="fw-semibold">
+                                            Rp {{ number_format($material->unit_price ?? 0, 2, ',', '.') }}
                                         </span>
                                     </td>
                                     <td>
@@ -149,7 +155,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="8" class="text-center py-5">
+                                    <td colspan="9" class="text-center py-5">
                                         <i class="bi bi-archive text-muted display-5 d-block mb-3"></i>
                                         <p class="mb-1 fw-semibold">Belum ada data material</p>
                                         <p class="text-muted mb-3">Mulai tambahkan material baru untuk kebutuhan proyek

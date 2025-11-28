@@ -13,6 +13,7 @@ class MaterialRequestItemSeeder extends Seeder
     public function run(): void
     {
         $materials = Material::pluck('id', 'sku');
+        $materialPrices = Material::pluck('unit_price', 'id');
         $requests = MaterialRequest::pluck('id', 'code');
 
         $items = [
@@ -63,7 +64,7 @@ class MaterialRequestItemSeeder extends Seeder
         $now = Carbon::now();
 
         $rows = collect($items)
-            ->map(function ($item) use ($materials, $requests, $now) {
+            ->map(function ($item) use ($materials, $materialPrices, $requests, $now) {
                 $requestId = $requests[$item['request_code']] ?? null;
                 $materialId = $materials[$item['material_sku']] ?? null;
 
@@ -71,10 +72,15 @@ class MaterialRequestItemSeeder extends Seeder
                     return null;
                 }
 
+                $unitPrice = (float) ($materialPrices[$materialId] ?? 0);
+                $totalPrice = round($unitPrice * $item['qty'], 2);
+
                 return [
                     'material_request_id' => $requestId,
                     'material_id' => $materialId,
                     'qty' => $item['qty'],
+                    'unit_price' => $unitPrice,
+                    'total_price' => $totalPrice,
                     'remarks' => $item['remarks'],
                     'created_at' => $now,
                     'updated_at' => $now,
@@ -88,5 +94,16 @@ class MaterialRequestItemSeeder extends Seeder
         }
 
         DB::table('material_request_items')->insert($rows->all());
+
+        $rows
+            ->groupBy('material_request_id')
+            ->each(function ($groupedRows, $requestId) use ($now) {
+                $totalAmount = $groupedRows->sum('total_price');
+
+                MaterialRequest::whereKey($requestId)->update([
+                    'total_amount' => round($totalAmount, 2),
+                    'updated_at' => $now,
+                ]);
+            });
     }
 }

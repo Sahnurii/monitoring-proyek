@@ -67,6 +67,12 @@
                         </dd>
                     </div>
                     <div class="col-md-4">
+                        <dt class="text-muted">Total Permintaan</dt>
+                        <dd class="fs-5 fw-semibold">
+                            Rp {{ number_format((float) $materialRequest->total_amount, 2, ',', '.') }}
+                        </dd>
+                    </div>
+                    <div class="col-md-4">
                         <dt class="text-muted">Tanggal Permintaan</dt>
                         <dd>
                             <div class="fs-5">{{ $requestDate ?? 'Belum ditentukan' }}</div>
@@ -134,6 +140,8 @@
                                 <th>Material</th>
                                 <th style="width: 120px;" class="text-end">Jumlah</th>
                                 <th style="width: 150px;">Satuan</th>
+                                <th style="width: 150px;" class="text-end">Harga Satuan</th>
+                                <th style="width: 150px;" class="text-end">Total Harga</th>
                                 <th>Catatan</th>
                             </tr>
                         </thead>
@@ -151,11 +159,17 @@
                                     <td>
                                         {{ optional($item->material?->unit)->symbol ?? optional($item->material?->unit)->name ?? '-' }}
                                     </td>
+                                    <td class="text-end">
+                                        Rp {{ number_format((float) $item->unit_price, 2, ',', '.') }}
+                                    </td>
+                                    <td class="text-end fw-semibold">
+                                        Rp {{ number_format((float) $item->total_price, 2, ',', '.') }}
+                                    </td>
                                     <td>{{ $item->remarks ?? '-' }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="text-center py-5">
+                                    <td colspan="7" class="text-center py-5">
                                         <i class="bi bi-list-task text-muted display-5 d-block mb-3"></i>
                                         <p class="mb-1 fw-semibold">Tidak ada material tercatat</p>
                                         <p class="text-muted mb-0">Permintaan ini belum memiliki item material.</p>
@@ -164,6 +178,12 @@
                             @endforelse
                         </tbody>
                     </table>
+                </div>
+                <div class="mt-4 d-flex justify-content-end">
+                    <div class="text-end">
+                        <div class="text-muted small">Total Permintaan</div>
+                        <div class="fs-5 fw-bold">Rp {{ number_format((float) $materialRequest->total_amount, 2, ',', '.') }}</div>
+                    </div>
                 </div>
             </div>
         </div>

@@ -51,7 +51,7 @@
                     ['label' => 'Data Proyek', 'route' => 'reports.project'],
                     ['label' => 'Pengadaan (PO)', 'route' => 'reports.procurement'],
                     ['label' => 'Stok & Kartu Stok', 'route' => 'reports.inventory'],
-                    ['label' => 'Pengeluaran ke Proyek', 'route' => 'reports.project'],
+                    ['label' => 'Pengeluaran ke Proyek', 'route' => 'reports.out.project'],
                     ['label' => 'Data Supplier', 'route' => 'reports.supplier'],
                 ],
             ],

@@ -59,6 +59,13 @@
                         </dd>
                     </div>
                     <div class="col-md-6">
+                        <dt class="text-muted">Harga Per Unit</dt>
+                        <dd class="fs-5 fw-semibold">
+                            Rp {{ number_format($material->unit_price ?? 0, 2, ',', '.') }}
+                            <span class="fs-6 text-muted">/{{ optional($material->unit)->symbol ?? 'unit' }}</span>
+                        </dd>
+                    </div>
+                    <div class="col-md-6">
                         <dt class="text-muted">Dibuat</dt>
                         <dd>
                             <div>{{ optional($material->created_at)->format('d M Y') }}</div>

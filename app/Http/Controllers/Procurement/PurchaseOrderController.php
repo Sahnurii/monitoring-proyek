@@ -96,7 +96,12 @@ class PurchaseOrderController extends Controller
             'suppliers' => Supplier::orderBy('name')->get(['id', 'name', 'email']),
             'projects' => Project::orderBy('name')->get(['id', 'name', 'code']),
             'materials' => Material::with('unit')->orderBy('name')->get(),
-            'materialRequests' => MaterialRequest::orderByDesc('request_date')->orderBy('code')->get(['id', 'code']),
+            'materialRequests' => MaterialRequest::with([
+                'items' => fn ($query) => $query->select('id', 'material_request_id', 'material_id', 'qty', 'remarks'),
+            ])
+                ->orderByDesc('request_date')
+                ->orderBy('code')
+                ->get(['id', 'code', 'project_id']),
             'statuses' => self::STATUS_OPTIONS,
             'title' => 'Buat Purchase Order',
             'user' => Auth::user(),
@@ -160,7 +165,12 @@ class PurchaseOrderController extends Controller
             'suppliers' => Supplier::orderBy('name')->get(['id', 'name', 'email']),
             'projects' => Project::orderBy('name')->get(['id', 'name', 'code']),
             'materials' => Material::with('unit')->orderBy('name')->get(),
-            'materialRequests' => MaterialRequest::orderByDesc('request_date')->orderBy('code')->get(['id', 'code']),
+            'materialRequests' => MaterialRequest::with([
+                'items' => fn ($query) => $query->select('id', 'material_request_id', 'material_id', 'qty', 'remarks'),
+            ])
+                ->orderByDesc('request_date')
+                ->orderBy('code')
+                ->get(['id', 'code', 'project_id']),
             'statuses' => self::STATUS_OPTIONS,
             'title' => 'Ubah Purchase Order',
             'user' => Auth::user(),

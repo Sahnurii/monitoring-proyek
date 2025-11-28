@@ -39,11 +39,9 @@
 
                     <div class="col-md-6">
                         <label for="sku" class="form-label">SKU Material</label>
-                        <input type="text" id="sku" name="sku" value="{{ old('sku') }}"
-                            class="form-control @error('sku') is-invalid @enderror" placeholder="Contoh: MAT-001" required>
-                        @error('sku')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
+                        <input type="text" id="sku"
+                            class="form-control" value="Akan dihasilkan otomatis saat penyimpanan" disabled>
+                        <div class="form-text">Kode SKU mengikuti urutan otomatis dengan awalan MAT-.</div>
                     </div>
 
                     <div class="col-md-6">
@@ -83,6 +81,20 @@
                             <div class="invalid-feedback d-block">{{ $message }}</div>
                         @enderror
                         <div class="form-text">Isi 0 jika tidak memiliki batas stok minimal.</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label for="unit_price" class="form-label">Harga Per Unit</label>
+                        <div class="input-group">
+                            <span class="input-group-text">Rp</span>
+                            <input type="number" id="unit_price" name="unit_price" min="0" step="0.01"
+                                value="{{ old('unit_price', '0') }}"
+                                class="form-control @error('unit_price') is-invalid @enderror" placeholder="0" required>
+                        </div>
+                        @error('unit_price')
+                            <div class="invalid-feedback d-block">{{ $message }}</div>
+                        @enderror
+                        <div class="form-text">Gunakan harga dasar sebelum diskon atau pajak.</div>
                     </div>
 
                     <div class="col-12 d-flex justify-content-end gap-2">

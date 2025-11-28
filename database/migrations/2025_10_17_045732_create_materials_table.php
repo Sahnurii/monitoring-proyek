@@ -17,6 +17,7 @@ return new class extends Migration
             $t->string('name')->index();
             $t->foreignId('unit_id')->constrained('units');
             $t->decimal('min_stock', 18, 2)->default(0);
+            $t->decimal('unit_price', 18, 2)->default(0);
             $t->timestamps();
             $t->softDeletes();
         });

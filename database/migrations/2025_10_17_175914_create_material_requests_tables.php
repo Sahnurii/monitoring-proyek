@@ -19,6 +19,7 @@ return new class extends Migration
             $t->text('notes')->nullable();
             $t->foreignId('approved_by')->nullable()->constrained('users');
             $t->timestamp('approved_at')->nullable();
+            $t->decimal('total_amount', 18, 2)->default(0);
             $t->timestamps();
         });
 
@@ -27,6 +28,8 @@ return new class extends Migration
             $t->foreignId('material_request_id')->constrained('material_requests')->cascadeOnDelete();
             $t->foreignId('material_id')->constrained('materials');
             $t->decimal('qty', 18, 2);
+            $t->decimal('unit_price', 18, 2)->default(0);
+            $t->decimal('total_price', 18, 2)->default(0);
             $t->string('remarks', 255)->nullable();
             $t->timestamps();
         });

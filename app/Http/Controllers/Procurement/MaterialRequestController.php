@@ -84,17 +84,18 @@ class MaterialRequestController extends Controller
         $validated = $this->validateMaterialRequest($request);
 
         $items = $validated['items'];
-        unset($validated['items']);
+        $totalAmount = $validated['total_amount'];
+        unset($validated['items'], $validated['total_amount']);
 
         $status = $validated['status'];
 
         $attributes = [
-            'code' => $validated['code'],
             'project_id' => $validated['project_id'],
             'request_date' => $validated['request_date'],
             'status' => $status,
             'notes' => $validated['notes'] ?? null,
             'requested_by' => Auth::id(),
+            'total_amount' => $totalAmount,
         ];
 
         if ($status === 'approved') {
@@ -145,16 +146,17 @@ class MaterialRequestController extends Controller
         $validated = $this->validateMaterialRequest($request, $materialRequest);
 
         $items = $validated['items'];
-        unset($validated['items']);
+        $totalAmount = $validated['total_amount'];
+        unset($validated['items'], $validated['total_amount']);
 
         $status = $validated['status'];
 
         $attributes = [
-            'code' => $validated['code'],
             'project_id' => $validated['project_id'],
             'request_date' => $validated['request_date'],
             'status' => $status,
             'notes' => $validated['notes'] ?? null,
+            'total_amount' => $totalAmount,
         ];
 
         if ($status === 'approved') {
@@ -198,12 +200,6 @@ class MaterialRequestController extends Controller
         $statuses = array_keys(self::STATUS_OPTIONS);
 
         $validator = Validator::make($request->all(), [
-            'code' => [
-                'required',
-                'string',
-                'max:50',
-                Rule::unique('material_requests', 'code')->ignore($materialRequest?->getKey()),
-            ],
             'project_id' => ['required', 'exists:projects,id'],
             'request_date' => ['required', 'date'],
             'status' => ['required', Rule::in($statuses)],
@@ -211,6 +207,7 @@ class MaterialRequestController extends Controller
             'items' => ['nullable', 'array'],
             'items.*.material_id' => ['nullable', 'exists:materials,id'],
             'items.*.qty' => ['nullable', 'numeric', 'min:0.01'],
+            // 'items.*.price' => ['nullable', 'numeric', 'min:0'],
             'items.*.remarks' => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -224,7 +221,10 @@ class MaterialRequestController extends Controller
             ]);
         }
 
-        $data['items'] = $items;
+        [$pricedItems, $totalAmount] = $this->applyPricingToItems($items);
+
+        $data['items'] = $pricedItems;
+        $data['total_amount'] = $totalAmount;
 
         return $data;
     }
@@ -236,16 +236,49 @@ class MaterialRequestController extends Controller
                 return [
                     'material_id' => $item['material_id'] ?? null,
                     'qty' => isset($item['qty']) ? (float) $item['qty'] : null,
+                    // 'price' => isset($item['price']) ? (float) $item['price'] : null,
                     'remarks' => $item['remarks'] ?? null,
                 ];
             })
-            ->filter(fn ($item) => !empty($item['material_id']) && !empty($item['qty']))
-            ->map(fn ($item) => [
+            ->filter(fn($item) => !empty($item['material_id']) && !empty($item['qty']))
+            ->map(fn($item) => [
                 'material_id' => $item['material_id'],
                 'qty' => round((float) $item['qty'], 2),
+                // 'price' => isset($item['price']) ? round((float) $item['price'], 2) : null,
                 'remarks' => $item['remarks'] ?? null,
             ])
             ->values()
             ->all();
+    }
+
+    protected function applyPricingToItems(array $items): array
+    {
+        if (empty($items)) {
+            return [[], '0.00'];
+        }
+
+        $materialIds = collect($items)->pluck('material_id')->unique()->all();
+        $materials = Material::query()
+            ->whereIn('id', $materialIds)
+            ->get(['id', 'unit_price'])
+            ->keyBy('id');
+
+        $totalAmount = 0;
+
+        $pricedItems = collect($items)
+            ->map(function ($item) use ($materials, &$totalAmount) {
+                $material = $materials->get($item['material_id']);
+                $unitPrice = $material?->unit_price ?? 0;
+                $totalPrice = round($unitPrice * $item['qty'], 2);
+                $totalAmount += $totalPrice;
+
+                return array_merge($item, [
+                    'unit_price' => number_format((float) $unitPrice, 2, '.', ''),
+                    'total_price' => number_format($totalPrice, 2, '.', ''),
+                ]);
+            })
+            ->all();
+
+        return [$pricedItems, number_format($totalAmount, 2, '.', '')];
     }
 }

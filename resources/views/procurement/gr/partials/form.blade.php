@@ -16,6 +16,7 @@
                 'material_id' => $item->material_id ?? null,
                 'qty' => $item->qty ?? null,
                 'returned_qty' => $item->returned_qty ?? 0,
+                'purchase_order_item_id' => $item->purchase_order_item_id ?? null,
                 'remarks' => $item->remarks ?? null,
             ];
         })->toArray();
@@ -54,6 +55,29 @@
     $defaultVerifiedAt = old('verified_at', $defaultVerifiedAt);
 
     $submitLabel = $submitLabel ?? 'Simpan Goods Receipt';
+
+    $purchaseOrderDataset = collect($purchaseOrders ?? [])
+        ->mapWithKeys(function ($order) {
+            $items = collect(optional($order)->items ?? []);
+
+            return [
+                $order->id => [
+                    'id' => $order->id,
+                    'project_id' => $order->project_id ?? null,
+                    'supplier_id' => $order->supplier_id ?? null,
+                    'items' => $items
+                        ->map(function ($item) {
+                            return [
+                                'id' => $item->id ?? null,
+                                'material_id' => $item->material_id ?? null,
+                                'qty' => $item->qty !== null ? (float) $item->qty : null,
+                            ];
+                        })
+                        ->values(),
+                ],
+            ];
+        })
+        ->toArray();
 @endphp
 
 @if ($errors->any())
@@ -225,16 +249,19 @@
                                         <select name="items[{{ $index }}][material_id]" data-field="material_id"
                                             class="form-select @error('items.' . $index . '.material_id') is-invalid @enderror">
                                             <option value="">Pilih Material</option>
-                                            @foreach ($materials as $material)
-                                                <option value="{{ $material->id }}"
-                                                    @selected((string) ($item['material_id'] ?? '') === (string) $material->id)>
-                                                    {{ $material->name }}
-                                                    @if ($material->unit)
-                                                        ({{ $material->unit->symbol ?? $material->unit->name }})
-                                                    @endif
-                                                </option>
-                                            @endforeach
+                                        @foreach ($materials as $material)
+                                            <option value="{{ $material->id }}"
+                                                @selected((string) ($item['material_id'] ?? '') === (string) $material->id)>
+                                                {{ $material->name }}
+                                                @if ($material->unit)
+                                                    ({{ $material->unit->symbol ?? $material->unit->name }})
+                                                @endif
+                                            </option>
+                                        @endforeach
                                         </select>
+                                        <input type="hidden" name="items[{{ $index }}][purchase_order_item_id]"
+                                            data-field="purchase_order_item_id"
+                                            value="{{ old('items.' . $index . '.purchase_order_item_id', $item['purchase_order_item_id'] ?? '') }}">
                                         @error('items.' . $index . '.material_id')
                                             <div class="invalid-feedback">{{ $message }}</div>
                                         @enderror
@@ -311,6 +338,8 @@
                         </option>
                     @endforeach
                 </select>
+                <input type="hidden" name="items[__INDEX__][purchase_order_item_id]" data-field="purchase_order_item_id"
+                    value="">
             </td>
             <td>
                 <div class="input-group">
@@ -338,3 +367,208 @@
         </tr>
     </template>
 </form>
+
+@once
+    @push('scripts')
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const purchaseOrdersData = @json($purchaseOrderDataset);
+
+                document.querySelectorAll('[data-gr-items-container]').forEach((container) => {
+                    const tableBody = container.querySelector('[data-items-body]');
+                    if (!tableBody) {
+                        return;
+                    }
+
+                    const template = container.querySelector('#gr-item-row-template');
+                    const purchaseOrderSelect = container.querySelector('#purchase_order_id');
+                    const projectSelect = container.querySelector('#project_id');
+                    const supplierSelect = container.querySelector('#supplier_id');
+                    let nextIndex = Number(container.getAttribute('data-next-index')) || tableBody.children.length;
+                    let previousOrderId = purchaseOrderSelect ? purchaseOrderSelect.value : '';
+
+                    const updateNextIndex = (value) => {
+                        nextIndex = value;
+                        container.setAttribute('data-next-index', String(nextIndex));
+                    };
+
+                    const setSelectValue = (select, value) => {
+                        if (!select) {
+                            return;
+                        }
+
+                        const normalized = value === null || value === undefined || value === '' ? '' : String(value);
+                        if (select.value !== normalized) {
+                            select.value = normalized;
+                            select.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                    };
+
+                    const addRow = (defaults = {}) => {
+                        if (!template) {
+                            return null;
+                        }
+
+                        const html = template.innerHTML.replace(/__INDEX__/g, nextIndex);
+                        const wrapper = document.createElement('tbody');
+                        wrapper.innerHTML = html.trim();
+                        const row = wrapper.firstElementChild;
+
+                        if (!row) {
+                            return null;
+                        }
+
+                        const materialField = row.querySelector('[data-field="material_id"]');
+                        const qtyField = row.querySelector('[data-field="qty"]');
+                        const returnedField = row.querySelector('[data-field="returned_qty"]');
+                        const remarksField = row.querySelector('[data-field="remarks"]');
+                        const poItemField = row.querySelector('[data-field="purchase_order_item_id"]');
+
+                        if (defaults.material_id !== undefined && defaults.material_id !== null && materialField) {
+                            materialField.value = String(defaults.material_id);
+                        }
+
+                        if (defaults.qty !== undefined && defaults.qty !== null && qtyField) {
+                            qtyField.value = defaults.qty;
+                        }
+
+                        if (defaults.returned_qty !== undefined && defaults.returned_qty !== null && returnedField) {
+                            returnedField.value = defaults.returned_qty;
+                        }
+
+                        if (defaults.remarks !== undefined && defaults.remarks !== null && remarksField) {
+                            remarksField.value = defaults.remarks;
+                        }
+
+                        if (defaults.purchase_order_item_id !== undefined && defaults.purchase_order_item_id !== null && poItemField) {
+                            poItemField.value = String(defaults.purchase_order_item_id);
+                        }
+
+                        tableBody.appendChild(row);
+                        updateNextIndex(nextIndex + 1);
+
+                        return row;
+                    };
+
+                    const clearItems = () => {
+                        tableBody.innerHTML = '';
+                        updateNextIndex(0);
+                    };
+
+                    const hasFilledItems = () => {
+                        return Array.from(tableBody.querySelectorAll('tr')).some((row) => {
+                            const materialField = row.querySelector('[data-field="material_id"]');
+                            const qtyField = row.querySelector('[data-field="qty"]');
+                            const returnedField = row.querySelector('[data-field="returned_qty"]');
+                            const remarksField = row.querySelector('[data-field="remarks"]');
+                            const poItemField = row.querySelector('[data-field="purchase_order_item_id"]');
+
+                            const hasMaterial = materialField && materialField.value;
+                            const hasQty = qtyField && qtyField.value && parseFloat(qtyField.value) > 0;
+                            const hasReturned = returnedField && returnedField.value && parseFloat(returnedField.value) > 0;
+                            const hasRemarks = remarksField && remarksField.value.trim() !== '';
+                            const hasPoItem = poItemField && poItemField.value;
+
+                            return hasMaterial || hasQty || hasReturned || hasRemarks || hasPoItem;
+                        });
+                    };
+
+                    const populateFromOrder = (order) => {
+                        if (!order) {
+                            return;
+                        }
+
+                        setSelectValue(projectSelect, order.project_id ?? '');
+                        setSelectValue(supplierSelect, order.supplier_id ?? '');
+
+                        const items = Array.isArray(order.items) ? order.items : [];
+
+                        clearItems();
+
+                        if (items.length === 0) {
+                            addRow();
+                            return;
+                        }
+
+                        items.forEach((item) => {
+                            addRow({
+                                material_id: item.material_id ?? null,
+                                qty: item.qty ?? null,
+                                returned_qty: 0,
+                                purchase_order_item_id: item.id ?? null,
+                            });
+                        });
+                    };
+
+                    tableBody.addEventListener('click', (event) => {
+                        const removeButton = event.target.closest('[data-remove-item]');
+                        if (!removeButton) {
+                            return;
+                        }
+
+                        event.preventDefault();
+
+                        const row = removeButton.closest('tr');
+                        if (row) {
+                            row.remove();
+                        }
+
+                        if (tableBody.children.length === 0) {
+                            addRow();
+                        }
+                    });
+
+                    const addButton = container.querySelector('[data-add-item]');
+                    if (addButton) {
+                        addButton.addEventListener('click', () => {
+                            addRow();
+                        });
+                    }
+
+                    if (purchaseOrderSelect) {
+                        purchaseOrderSelect.addEventListener('change', () => {
+                            const selectedId = purchaseOrderSelect.value;
+
+                            if (!selectedId) {
+                                previousOrderId = '';
+                                return;
+                            }
+
+                            const order = purchaseOrdersData[selectedId];
+                            if (!order) {
+                                previousOrderId = selectedId;
+                                return;
+                            }
+
+                            if (hasFilledItems()) {
+                                const confirmReplace = window.confirm(
+                                    'Mengambil item dari purchase order akan menggantikan daftar item saat ini. Lanjutkan?'
+                                );
+
+                                if (!confirmReplace) {
+                                    purchaseOrderSelect.value = previousOrderId;
+                                    return;
+                                }
+                            }
+
+                            populateFromOrder(order);
+                            previousOrderId = selectedId;
+                        });
+
+                        if (purchaseOrderSelect.value && !hasFilledItems()) {
+                            const initialOrder = purchaseOrdersData[purchaseOrderSelect.value];
+                            if (initialOrder) {
+                                populateFromOrder(initialOrder);
+                                previousOrderId = purchaseOrderSelect.value;
+                            }
+                        }
+                    }
+
+                    if (tableBody.children.length === 0) {
+                        addRow();
+                    }
+                });
+            });
+        </script>
+    @endpush
+@endonce

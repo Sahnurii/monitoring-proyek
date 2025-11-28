@@ -7,6 +7,7 @@ use App\Models\GoodsIssue;
 use App\Models\Material;
 use App\Models\Project;
 use App\Models\User;
+use App\Services\Inventory\StockMovementService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,6 +24,10 @@ class GoodsIssueController extends Controller
         'issued' => 'Dikeluarkan',
         'returned' => 'Dikembalikan',
     ];
+
+    public function __construct(private StockMovementService $stockMovements)
+    {
+    }
 
     public function index(Request $request): View
     {
@@ -106,9 +111,14 @@ class GoodsIssueController extends Controller
             'remarks' => $validated['remarks'] ?? null,
         ];
 
-        $goodsIssue = DB::transaction(function () use ($attributes, $items) {
+        $actorId = Auth::id();
+
+        $goodsIssue = DB::transaction(function () use ($attributes, $items, $actorId) {
             $issue = GoodsIssue::create($attributes);
-            $issue->items()->createMany($items);
+            $createdItems = $issue->items()->createMany($items);
+            $issue->setRelation('items', collect($createdItems));
+
+            $this->stockMovements->syncGoodsIssue($issue, $actorId);
 
             return $issue;
         });
@@ -159,10 +169,17 @@ class GoodsIssueController extends Controller
             'remarks' => $validated['remarks'] ?? null,
         ];
 
-        DB::transaction(function () use ($goodsIssue, $attributes, $items) {
+        $actorId = Auth::id();
+
+        DB::transaction(function () use ($goodsIssue, $attributes, $items, $actorId) {
+            $this->stockMovements->purgeGoodsIssue($goodsIssue);
+
             $goodsIssue->update($attributes);
             $goodsIssue->items()->delete();
-            $goodsIssue->items()->createMany($items);
+            $createdItems = $goodsIssue->items()->createMany($items);
+            $goodsIssue->setRelation('items', collect($createdItems));
+
+            $this->stockMovements->syncGoodsIssue($goodsIssue, $actorId);
         });
 
         return redirect()
@@ -173,6 +190,7 @@ class GoodsIssueController extends Controller
     public function destroy(GoodsIssue $goodsIssue): RedirectResponse
     {
         DB::transaction(function () use ($goodsIssue) {
+            $this->stockMovements->purgeGoodsIssue($goodsIssue);
             $goodsIssue->items()->delete();
             $goodsIssue->delete();
         });

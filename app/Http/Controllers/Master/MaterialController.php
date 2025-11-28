@@ -7,7 +7,6 @@ use App\Models\Material;
 use App\Models\Unit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rule;
 
 class MaterialController extends Controller
 {
@@ -60,6 +59,7 @@ class MaterialController extends Controller
         $validated = $this->validateMaterial($request);
 
         $validated['min_stock'] = $validated['min_stock'] ?? 0;
+        $validated['unit_price'] = $this->normalizeMoneyInput($validated['unit_price'] ?? 0);
 
         $material = Material::create($validated);
 
@@ -96,6 +96,7 @@ class MaterialController extends Controller
         $validated = $this->validateMaterial($request, $material);
 
         $validated['min_stock'] = $validated['min_stock'] ?? 0;
+        $validated['unit_price'] = $this->normalizeMoneyInput($validated['unit_price'] ?? $material->unit_price);
 
         $material->update($validated);
 
@@ -116,15 +117,15 @@ class MaterialController extends Controller
     protected function validateMaterial(Request $request, ?Material $material = null): array
     {
         return $request->validate([
-            'sku' => [
-                'required',
-                'string',
-                'max:255',
-                Rule::unique('materials', 'sku')->ignore($material?->getKey()),
-            ],
             'name' => ['required', 'string', 'max:255'],
             'unit_id' => ['required', 'exists:units,id'],
             'min_stock' => ['nullable', 'numeric', 'min:0'],
+            'unit_price' => ['required', 'numeric', 'min:0'],
         ]);
+    }
+
+    private function normalizeMoneyInput(float|string $value): string
+    {
+        return number_format((float) $value, 2, '.', '');
     }
 }
