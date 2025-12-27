@@ -175,7 +175,6 @@ class MaterialRequestController extends Controller
                 return [
                     'material_id' => $item['material_id'] ?? null,
                     'qty' => isset($item['qty']) ? (float) $item['qty'] : null,
-                    // 'price' => isset($item['price']) ? (float) $item['price'] : null,
                     'remarks' => $item['remarks'] ?? null,
                 ];
             })
@@ -183,7 +182,6 @@ class MaterialRequestController extends Controller
             ->map(fn($item) => [
                 'material_id' => $item['material_id'],
                 'qty' => round((float) $item['qty'], 2),
-                // 'price' => isset($item['price']) ? round((float) $item['price'], 2) : null,
                 'remarks' => $item['remarks'] ?? null,
             ])
             ->values()

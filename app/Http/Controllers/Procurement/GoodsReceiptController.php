@@ -479,15 +479,6 @@ class GoodsReceiptController extends Controller
                 ]);
             }
 
-            // $poItem = DB::table('purchase_order_items')
-            //     ->where('id', $item['purchase_order_item_id'])
-            //     ->where('purchase_order_id', $poId)
-            //     ->first();
-
-            // if (!$poItem) {
-            //     continue;
-            // }
-
             $query = DB::table('goods_receipt_items')
                 ->join('goods_receipts', 'goods_receipt_items.goods_receipt_id', '=', 'goods_receipts.id')
                 ->where('goods_receipts.purchase_order_id', $poId)
@@ -510,14 +501,6 @@ class GoodsReceiptController extends Controller
 
             $remainingQty = round($poItem->qty - $effectiveReceived, 2);
 
-            // $receivedQty = (float) $query->sum('goods_receipt_items.qty');
-            // $remainingQty = round($poItem->qty - $receivedQty, 2);
-
-            // if ($item['qty'] > $remainingQty) {
-            //     throw ValidationException::withMessages([
-            //         "items.$index.qty" => "Jumlah melebihi sisa PO ({$remainingQty}). Total GR lain: {$receivedQty}",
-            //     ]);
-            // }
             if ($requestedQty > $remainingQty) {
                 $material = Material::find($materialId);
                 $materialName = $material ? $material->name : "Material ID {$materialId}";
@@ -536,12 +519,10 @@ class GoodsReceiptController extends Controller
             foreach ($items as $index => $item) {
                 $materialId = $item['material_id'];
 
-                // Jika ada purchase_order_item_id, sudah divalidasi di atas
                 if (!empty($item['purchase_order_item_id'])) {
                     continue;
                 }
 
-                // Jika tidak ada purchase_order_item_id, cek apakah material ada di PO
                 $poHasMaterial = $poItemsMap->contains(function ($poItem) use ($materialId) {
                     return (int) $poItem->material_id === (int) $materialId;
                 });
@@ -556,11 +537,7 @@ class GoodsReceiptController extends Controller
                     ]);
                 }
             }
-            // if ($item['qty'] > $remainingQty) {
-            //     throw ValidationException::withMessages([
-            //         "items.$index.qty" => "Jumlah melebihi sisa PO ({$remainingQty}). Total efektif diterima: {$effectiveReceived} (Diterima: {$totalReceived}, Retur: {$totalReturned})",
-            //     ]);
-            // }
+
         }
     }
 
@@ -597,36 +574,4 @@ class GoodsReceiptController extends Controller
         ]);
     }
 
-
-    // protected function syncPurchaseOrderStatus(PurchaseOrder $po): void
-    // {
-    //     $poItems = $po->items;
-
-    //     $allReceived = true;
-
-    //     foreach ($poItems as $item) {
-    //         $receivedQty = DB::table('goods_receipt_items')
-    //             ->join('goods_receipts', 'goods_receipt_items.goods_receipt_id', '=', 'goods_receipts.id')
-    //             ->where('goods_receipts.purchase_order_id', $po->id)
-    //             ->where('goods_receipts.status', 'completed')
-    //             ->where('goods_receipt_items.purchase_order_item_id', $item->id)
-    //             ->sum('goods_receipt_items.qty');
-
-    //         if ($receivedQty < $item->qty) {
-    //             $allReceived = false;
-    //             break;
-    //         }
-    //     }
-
-    //     if ($allReceived) {
-    //         $po->update([
-    //             'status' => 'received',
-    //             'received_at' => now(),
-    //         ]);
-    //     } else {
-    //         $po->update([
-    //             'status' => 'partial',
-    //         ]);
-    //     }
-    // }
 }
