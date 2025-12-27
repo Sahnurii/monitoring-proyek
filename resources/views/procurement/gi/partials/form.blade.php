@@ -11,27 +11,28 @@
             $issueItemsCollection = collect($goodsIssue->items);
         }
 
-        $issueItems = $issueItemsCollection->map(function ($item) {
-            return [
-                'material_id' => $item->material_id ?? null,
-                'qty' => $item->qty ?? null,
-                'remarks' => $item->remarks ?? null,
-            ];
-        })->toArray();
+        $issueItems = $issueItemsCollection
+            ->map(function ($item) {
+                return [
+                    'material_id' => $item->material_id ?? null,
+                    'qty' => $item->qty ?? null,
+                    'remarks' => $item->remarks ?? null,
+                ];
+            })
+            ->toArray();
     }
 
     $oldItems = old('items', $issueItems);
     if (empty($oldItems)) {
-        $oldItems = [
-            ['material_id' => null, 'qty' => null, 'remarks' => null],
-        ];
+        $oldItems = [['material_id' => null, 'qty' => null, 'remarks' => null]];
     }
     $oldItems = array_values($oldItems);
     $nextIndex = count($oldItems);
 
-    $defaultIssuedDate = $goodsIssue && $goodsIssue->issued_date
-        ? \Illuminate\Support\Carbon::parse($goodsIssue->issued_date)->format('Y-m-d')
-        : now()->format('Y-m-d');
+    $defaultIssuedDate =
+        $goodsIssue && $goodsIssue->issued_date
+            ? \Illuminate\Support\Carbon::parse($goodsIssue->issued_date)->format('Y-m-d')
+            : now()->format('Y-m-d');
     $defaultIssuedDate = old('issued_date', $defaultIssuedDate);
 
     $currentStatus = old('status', $goodsIssue->status ?? 'draft');
@@ -60,7 +61,8 @@
     <div class="col-md-4">
         <label for="code" class="form-label">Kode Goods Issue</label>
         <input type="text" id="code" name="code" value="{{ old('code', $goodsIssue->code ?? '') }}"
-            class="form-control @error('code') is-invalid @enderror" placeholder="Contoh: GI-001" required>
+            class="form-control @error('code') is-invalid @enderror" placeholder="Contoh: GI-001"
+            @if ($goodsIssue) readonly @endif required>
         @error('code')
             <div class="invalid-feedback">{{ $message }}</div>
         @enderror
@@ -68,19 +70,33 @@
 
     <div class="col-md-4">
         <label for="project_id" class="form-label">Proyek</label>
-        <select id="project_id" name="project_id" class="form-select @error('project_id') is-invalid @enderror" required>
-            <option value="">Pilih Proyek</option>
-            @foreach ($projects as $project)
-                <option value="{{ $project->id }}"
-                    @selected((string) old('project_id', $goodsIssue->project_id ?? '') === (string) $project->id)>
-                    {{ $project->code }} &mdash; {{ $project->name }}
+
+        @if ($goodsIssue)
+            <select id="project_id" class="form-select" disabled>
+                <option>
+                    {{ optional($projects->firstWhere('id', $goodsIssue->project_id))->code ?? '' }}
+                    &mdash;
+                    {{ optional($projects->firstWhere('id', $goodsIssue->project_id))->name ?? '' }}
                 </option>
-            @endforeach
-        </select>
+            </select>
+            <input type="hidden" name="project_id" value="{{ $goodsIssue->project_id }}">
+        @else
+            <select id="project_id" name="project_id" class="form-select @error('project_id') is-invalid @enderror"
+                required>
+                <option value="">Pilih Proyek</option>
+                @foreach ($projects as $project)
+                    <option value="{{ $project->id }}" @selected((string) old('project_id') === (string) $project->id)>
+                        {{ $project->code }} &mdash; {{ $project->name }}
+                    </option>
+                @endforeach
+            </select>
+        @endif
+
         @error('project_id')
             <div class="invalid-feedback">{{ $message }}</div>
         @enderror
     </div>
+
 
     <div class="col-md-4">
         <label for="issued_date" class="form-label">Tanggal Pengeluaran</label>
@@ -93,22 +109,29 @@
 
     <div class="col-md-4">
         <label for="status" class="form-label">Status</label>
-        <select id="status" name="status" class="form-select @error('status') is-invalid @enderror" required>
-            @foreach ($statuses as $value => $label)
-                <option value="{{ $value }}" @selected((string) $currentStatus === (string) $value)>
-                    {{ $label }}
-                </option>
-            @endforeach
-        </select>
+        @if (auth()->user()->role->role_name === 'admin')
+            <select name="status" class="form-select" required>
+                @foreach ($statuses as $value => $label)
+                    <option value="{{ $value }}" @selected($currentStatus === $value)>{{ $label }}</option>
+                @endforeach
+            </select>
+        @else
+            <input type="hidden" name="status" value="draft">
+            <input type="text" class="form-control" value="Draft" disabled>
+        @endif
         @error('status')
             <div class="invalid-feedback">{{ $message }}</div>
         @enderror
+        @if (auth()->user()->role->role_name !== 'admin')
+            <small class="text-muted">Status otomatis draft</small>
+        @endif
     </div>
+
 
     <div class="col-md-8">
         <label for="remarks" class="form-label">Catatan</label>
         <textarea id="remarks" name="remarks" rows="3" class="form-control @error('remarks') is-invalid @enderror"
-            placeholder="Tambahkan catatan pengeluaran">{{ old('remarks', $goodsIssue->remarks ?? '') }}</textarea>
+            placeholder="Tambahkan catatan pengeluaran" @if ($goodsIssue) readonly @endif>{{ old('remarks', $goodsIssue->remarks ?? '') }}</textarea>
         @error('remarks')
             <div class="invalid-feedback">{{ $message }}</div>
         @enderror
@@ -136,8 +159,7 @@
                                             class="form-select @error('items.' . $index . '.material_id') is-invalid @enderror">
                                             <option value="">Pilih Material</option>
                                             @foreach ($materials as $material)
-                                                <option value="{{ $material->id }}"
-                                                    @selected((string) ($item['material_id'] ?? '') === (string) $material->id)>
+                                                <option value="{{ $material->id }}" @selected((string) ($item['material_id'] ?? '') === (string) $material->id)>
                                                     {{ $material->name }}
                                                     @if ($material->unit)
                                                         ({{ $material->unit->symbol ?? $material->unit->name }})
@@ -163,9 +185,9 @@
                                         @enderror
                                     </td>
                                     <td>
-                                        <input type="text" name="items[{{ $index }}][remarks]" data-field="remarks"
-                                            value="{{ $item['remarks'] ?? '' }}" class="form-control"
-                                            placeholder="Catatan tambahan">
+                                        <input type="text" name="items[{{ $index }}][remarks]"
+                                            data-field="remarks" value="{{ $item['remarks'] ?? '' }}"
+                                            class="form-control" placeholder="Catatan tambahan">
                                     </td>
                                     <td class="text-center">
                                         <button type="button" class="btn btn-sm btn-outline-danger" data-remove-item>
@@ -211,8 +233,8 @@
             </td>
             <td>
                 <div class="input-group">
-                    <input type="number" min="0" step="0.01" name="items[__INDEX__][qty]" data-field="qty"
-                        class="form-control" placeholder="0.00">
+                    <input type="number" min="0" step="0.01" name="items[__INDEX__][qty]"
+                        data-field="qty" class="form-control" placeholder="0.00">
                     <span class="input-group-text">qty</span>
                 </div>
             </td>
@@ -236,7 +258,8 @@
                 document.querySelectorAll('[data-gi-items-container]').forEach((container) => {
                     const tableBody = container.querySelector('[data-gi-items-body]');
                     const template = container.querySelector('#gi-item-row-template');
-                    let itemIndex = Number(container.getAttribute('data-next-index')) || tableBody.children.length;
+                    let itemIndex = Number(container.getAttribute('data-next-index')) || tableBody.children
+                        .length;
 
                     const addButton = container.querySelector('[data-add-item]');
                     if (addButton) {

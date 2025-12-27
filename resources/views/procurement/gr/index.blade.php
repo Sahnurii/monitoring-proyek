@@ -56,8 +56,7 @@
                         <select id="purchase_order_id" name="purchase_order_id" class="form-select">
                             <option value="">Semua Purchase Order</option>
                             @foreach ($purchaseOrders as $order)
-                                <option value="{{ $order->id }}"
-                                    @selected((string) $order->id === request('purchase_order_id'))>
+                                <option value="{{ $order->id }}" @selected((string) $order->id === request('purchase_order_id'))>
                                     {{ $order->code }}
                                 </option>
                             @endforeach
@@ -69,8 +68,7 @@
                         <select id="project_id" name="project_id" class="form-select">
                             <option value="">Semua Proyek</option>
                             @foreach ($projects as $project)
-                                <option value="{{ $project->id }}"
-                                    @selected((string) $project->id === request('project_id'))>
+                                <option value="{{ $project->id }}" @selected((string) $project->id === request('project_id'))>
                                     {{ $project->code }} &mdash; {{ $project->name }}
                                 </option>
                             @endforeach
@@ -82,8 +80,7 @@
                         <select id="supplier_id" name="supplier_id" class="form-select">
                             <option value="">Semua Pemasok</option>
                             @foreach ($suppliers as $supplier)
-                                <option value="{{ $supplier->id }}"
-                                    @selected((string) $supplier->id === request('supplier_id'))>
+                                <option value="{{ $supplier->id }}" @selected((string) $supplier->id === request('supplier_id'))>
                                     {{ $supplier->name }}
                                 </option>
                             @endforeach
@@ -95,8 +92,7 @@
                         <select id="received_by" name="received_by" class="form-select">
                             <option value="">Semua Penerima</option>
                             @foreach ($receivers as $receiver)
-                                <option value="{{ $receiver->id }}"
-                                    @selected((string) $receiver->id === request('received_by'))>
+                                <option value="{{ $receiver->id }}" @selected((string) $receiver->id === request('received_by'))>
                                     {{ $receiver->name }}
                                 </option>
                             @endforeach
@@ -113,8 +109,7 @@
                         <label for="per_page" class="form-label">Per Halaman</label>
                         <select id="per_page" name="per_page" class="form-select">
                             @foreach ([10, 25, 50, 100] as $size)
-                                <option value="{{ $size }}"
-                                    @selected((string) $size === (string) request('per_page', 10))>
+                                <option value="{{ $size }}" @selected((string) $size === (string) request('per_page', 10))>
                                     {{ $size }}
                                 </option>
                             @endforeach
@@ -125,8 +120,7 @@
                         <button type="submit" class="btn btn-outline-primary w-100">
                             <i class="bi bi-funnel me-2"></i>Terapkan
                         </button>
-                        <a href="{{ route('procurement.goods-receipts.index') }}"
-                            class="btn btn-outline-secondary w-100">
+                        <a href="{{ route('procurement.goods-receipts.index') }}" class="btn btn-outline-secondary w-100">
                             <i class="bi bi-arrow-counterclockwise me-2"></i>Reset
                         </a>
                     </div>
@@ -179,52 +173,65 @@
                                         <div class="text-muted small">ID #{{ $receipt->id }}</div>
                                     </td>
                                     <td>
-                                        <div class="fw-semibold">{{ optional($receipt->purchaseOrder)->code ?? '-' }}</div>
+                                        <div class="fw-semibold">{{ optional($receipt->purchaseOrder)->code ?? '-' }}
+                                        </div>
                                         @if ($receipt->purchase_order_id)
                                             <div class="text-muted small">ID #{{ $receipt->purchase_order_id }}</div>
                                         @endif
                                     </td>
                                     <td>
                                         <div class="fw-semibold">{{ optional($project)->name ?? '-' }}</div>
-                                        <div class="text-muted small">{{ optional($project)->code ?? 'Tidak ada kode' }}</div>
+                                        <div class="text-muted small">{{ optional($project)->code ?? 'Tidak ada kode' }}
+                                        </div>
                                     </td>
                                     <td>
                                         <div class="fw-semibold">{{ optional($supplier)->name ?? '-' }}</div>
                                         <div class="text-muted small">{{ optional($supplier)->email ?? '-' }}</div>
                                     </td>
                                     <td>
-                                        <div class="fw-semibold">{{ optional($receipt->receiver)->name ?? 'Tidak diketahui' }}</div>
-                                        <div class="text-muted small">{{ optional($receipt->receiver)->email ?? '-' }}</div>
+                                        <div class="fw-semibold">
+                                            {{ optional($receipt->receiver)->name ?? 'Tidak diketahui' }}</div>
+                                        <div class="text-muted small">{{ optional($receipt->receiver)->email ?? '-' }}
+                                        </div>
                                     </td>
                                     <td>
                                         <div>{{ $receivedDate ?? '-' }}</div>
-                                        <div class="text-muted small">{{ $receipt->created_at?->format('H:i') ?? '' }}</div>
+                                        <div class="text-muted small">{{ $receipt->created_at?->format('H:i') ?? '' }}
+                                        </div>
                                     </td>
-                                    <td>
-                                        <span class="badge {{ $badgeClass }}">{{ $statusLabel }}</span>
+                                    <td>    
+                                        <span class="badge {{ $badgeClass }}" title="Status Goods Receipt">
+                                            {{ $statusLabel }}
+                                        </span>
                                     </td>
+
                                     <td class="text-center">
                                         <span class="fw-semibold">{{ $receipt->items_count ?? 0 }}</span>
                                     </td>
                                     <td class="text-end">
-                                        <div class="btn-group" role="group" aria-label="Aksi Goods Receipt">
+                                        <div class="btn-group">
                                             <a href="{{ route('procurement.goods-receipts.show', $receipt) }}"
-                                                class="btn btn-sm btn-outline-secondary" title="Detail">
+                                                class="btn btn-sm btn-outline-secondary">
                                                 <i class="bi bi-eye"></i>
                                             </a>
-                                            <a href="{{ route('procurement.goods-receipts.edit', $receipt) }}"
-                                                class="btn btn-sm btn-outline-primary" title="Ubah">
-                                                <i class="bi bi-pencil"></i>
-                                            </a>
-                                            <form action="{{ route('procurement.goods-receipts.destroy', $receipt) }}"
-                                                method="POST" class="d-inline"
-                                                onsubmit="return confirm('Hapus goods receipt ini?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Hapus">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </form>
+
+                                            @if (in_array($receipt->status, ['draft', 'in_progress']))
+                                                <a href="{{ route('procurement.goods-receipts.edit', $receipt) }}"
+                                                    class="btn btn-sm btn-outline-primary">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                            @endif
+
+                                            @if ($receipt->status === 'draft')
+                                                <form action="{{ route('procurement.goods-receipts.destroy', $receipt) }}"
+                                                    method="POST" onsubmit="return confirm('Hapus goods receipt ini?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button class="btn btn-sm btn-outline-danger">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>
@@ -233,8 +240,10 @@
                                     <td colspan="10" class="text-center py-5">
                                         <i class="bi bi-box-seam text-muted display-5 d-block mb-3"></i>
                                         <p class="mb-1 fw-semibold">Belum ada goods receipt</p>
-                                        <p class="text-muted mb-3">Tambahkan penerimaan barang untuk mulai mencatat stok masuk.</p>
-                                        <a href="{{ route('procurement.goods-receipts.create') }}" class="btn btn-primary">
+                                        <p class="text-muted mb-3">Tambahkan penerimaan barang untuk mulai mencatat stok
+                                            masuk.</p>
+                                        <a href="{{ route('procurement.goods-receipts.create') }}"
+                                            class="btn btn-primary">
                                             <i class="bi bi-plus-lg me-2"></i>Tambah Goods Receipt
                                         </a>
                                     </td>

@@ -15,8 +15,8 @@ use Illuminate\Validation\ValidationException;
 
 class MaterialRequestController extends Controller
 {
+
     private const STATUS_OPTIONS = [
-        'draft' => 'Draft',
         'submitted' => 'Diajukan',
         'approved' => 'Disetujui',
         'rejected' => 'Ditolak',
@@ -70,8 +70,13 @@ class MaterialRequestController extends Controller
 
     public function create()
     {
+        $activeProjects = Project::query()
+            ->whereIn('status', ['planned', 'ongoing'])
+            ->orderBy('name')
+            ->get(['id', 'name', 'code']);
+
         return view('procurement.mr.create', [
-            'projects' => Project::orderBy('name')->get(['id', 'name', 'code']),
+            'projects' => $activeProjects,
             'materials' => Material::with('unit')->orderBy('name')->get(),
             'statuses' => self::STATUS_OPTIONS,
             'title' => 'Buat Permintaan Material',
@@ -81,6 +86,8 @@ class MaterialRequestController extends Controller
 
     public function store(Request $request)
     {
+        $request->merge(['status' => 'submitted']);
+
         $validated = $this->validateMaterialRequest($request);
 
         $items = $validated['items'];
@@ -92,7 +99,7 @@ class MaterialRequestController extends Controller
         $attributes = [
             'project_id' => $validated['project_id'],
             'request_date' => $validated['request_date'],
-            'status' => $status,
+            'status' => $validated['status'],
             'notes' => $validated['notes'] ?? null,
             'requested_by' => Auth::id(),
             'total_amount' => $totalAmount,
@@ -125,74 +132,6 @@ class MaterialRequestController extends Controller
             'title' => 'Detail Permintaan Material',
             'user' => Auth::user(),
         ]);
-    }
-
-    public function edit(MaterialRequest $materialRequest)
-    {
-        $materialRequest->load(['items.material.unit']);
-
-        return view('procurement.mr.edit', [
-            'materialRequest' => $materialRequest,
-            'projects' => Project::orderBy('name')->get(['id', 'name', 'code']),
-            'materials' => Material::with('unit')->orderBy('name')->get(),
-            'statuses' => self::STATUS_OPTIONS,
-            'title' => 'Ubah Permintaan Material',
-            'user' => Auth::user(),
-        ]);
-    }
-
-    public function update(Request $request, MaterialRequest $materialRequest)
-    {
-        $validated = $this->validateMaterialRequest($request, $materialRequest);
-
-        $items = $validated['items'];
-        $totalAmount = $validated['total_amount'];
-        unset($validated['items'], $validated['total_amount']);
-
-        $status = $validated['status'];
-
-        $attributes = [
-            'project_id' => $validated['project_id'],
-            'request_date' => $validated['request_date'],
-            'status' => $status,
-            'notes' => $validated['notes'] ?? null,
-            'total_amount' => $totalAmount,
-        ];
-
-        if ($status === 'approved') {
-            if ($materialRequest->status !== 'approved') {
-                $attributes['approved_by'] = Auth::id();
-                $attributes['approved_at'] = now();
-            } else {
-                $attributes['approved_by'] = $materialRequest->approved_by ?? Auth::id();
-                $attributes['approved_at'] = $materialRequest->approved_at ?? now();
-            }
-        } else {
-            $attributes['approved_by'] = null;
-            $attributes['approved_at'] = null;
-        }
-
-        DB::transaction(function () use ($materialRequest, $attributes, $items) {
-            $materialRequest->update($attributes);
-            $materialRequest->items()->delete();
-            $materialRequest->items()->createMany($items);
-        });
-
-        return redirect()
-            ->route('procurement.material-requests.show', $materialRequest)
-            ->with('success', 'Permintaan material berhasil diperbarui.');
-    }
-
-    public function destroy(MaterialRequest $materialRequest)
-    {
-        DB::transaction(function () use ($materialRequest) {
-            $materialRequest->purchaseOrders()->update(['material_request_id' => null]);
-            $materialRequest->delete();
-        });
-
-        return redirect()
-            ->route('procurement.material-requests.index')
-            ->with('success', 'Permintaan material berhasil dihapus.');
     }
 
     protected function validateMaterialRequest(Request $request, ?MaterialRequest $materialRequest = null): array

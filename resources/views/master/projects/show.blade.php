@@ -95,14 +95,14 @@
                         <dt class="text-muted">Dibuat</dt>
                         <dd>
                             <div>{{ optional($project->created_at)->format('d M Y') }}</div>
-                            <div class="text-muted small">{{ optional($project->created_at)->format('H:i') }} WIB</div>
+                            <div class="text-muted small">{{ optional($project->created_at)->format('H:i') }} WITA</div>
                         </dd>
                     </div>
                     <div class="col-md-6">
                         <dt class="text-muted">Diperbarui Terakhir</dt>
                         <dd>
                             <div>{{ optional($project->updated_at)->format('d M Y') }}</div>
-                            <div class="text-muted small">{{ optional($project->updated_at)->format('H:i') }} WIB</div>
+                            <div class="text-muted small">{{ optional($project->updated_at)->format('H:i') }} WITA</div>
                         </dd>
                     </div>
                 </dl>

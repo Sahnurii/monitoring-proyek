@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Log;
 
 class GoodsReceiptController extends Controller
 {
@@ -28,9 +29,7 @@ class GoodsReceiptController extends Controller
         'returned' => 'Diretur',
     ];
 
-    public function __construct(private StockMovementService $stockMovements)
-    {
-    }
+    public function __construct(private StockMovementService $stockMovements) {}
 
     public function index(Request $request): View
     {
@@ -124,16 +123,24 @@ class GoodsReceiptController extends Controller
     public function create(): View
     {
         return view('procurement.gr.create', [
-            'purchaseOrders' => PurchaseOrder::with([
-                'items' => fn ($query) => $query->select('id', 'purchase_order_id', 'material_id', 'qty'),
-            ])
-                ->orderByDesc('order_date')
+            'goodsReceipt' => new GoodsReceipt(),
+            'purchaseOrders' => PurchaseOrder::query()
+                ->whereIn('status', ['approved', 'partial'])
+                ->with([
+                    'items' => fn($q) => $q->select('id', 'purchase_order_id', 'material_id', 'qty'),
+                ])
+                ->orderByDesc('approved_at')
                 ->orderBy('code')
                 ->get(['id', 'code', 'project_id', 'supplier_id']),
+
             'projects' => Project::orderBy('name')->get(['id', 'name', 'code']),
             'suppliers' => Supplier::orderBy('name')->get(['id', 'name', 'email']),
             'materials' => Material::with('unit')->orderBy('name')->get(),
-            'statuses' => self::STATUS_OPTIONS,
+
+            'statuses' => [
+                'draft' => 'Draft',
+            ],
+
             'verifiers' => User::orderBy('name')->get(['id', 'name', 'email']),
             'title' => 'Buat Goods Receipt',
             'user' => Auth::user(),
@@ -142,18 +149,36 @@ class GoodsReceiptController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+
         $validated = $this->validateGoodsReceipt($request);
+
+        if (!empty($validated['purchase_order_id'])) {
+            $po = PurchaseOrder::findOrFail($validated['purchase_order_id']);
+
+            if (!in_array($po->status, ['approved', 'partial'], true)) {
+                return back()
+                    ->withInput()
+                    ->with('error', 'Goods Receipt hanya bisa dibuat dari PO yang disetujui.');
+            }
+        }
 
         $items = $validated['items'];
         unset($validated['items']);
 
+        if (!empty($validated['purchase_order_id'])) {
+            $this->validateAgainstPurchaseOrder(
+                $items,
+                (int) $validated['purchase_order_id']
+            );
+        }
+
         $attributes = [
-            'code' => $validated['code'],
-            'purchase_order_id' => $validated['purchase_order_id'] ?? null,
-            'project_id' => $validated['project_id'] ?? null,
-            'supplier_id' => $validated['supplier_id'] ?? null,
+            'code' => GoodsReceipt::generateCode(),
+            'purchase_order_id' => $po->id,
+            'project_id' => $po->project_id,
+            'supplier_id' => $po->supplier_id,
             'received_date' => $validated['received_date'],
-            'status' => $validated['status'],
+            'status' => 'draft',
             'received_by' => Auth::id(),
             'remarks' => $validated['remarks'] ?? null,
         ];
@@ -170,11 +195,7 @@ class GoodsReceiptController extends Controller
 
         $goodsReceipt = DB::transaction(function () use ($attributes, $items, $actorId) {
             $receipt = GoodsReceipt::create($attributes);
-            $createdItems = $receipt->items()->createMany($items);
-            $receipt->setRelation('items', collect($createdItems));
-
-            $this->stockMovements->syncGoodsReceipt($receipt, $actorId);
-
+            $receipt->items()->createMany($items);
             return $receipt;
         });
 
@@ -206,20 +227,27 @@ class GoodsReceiptController extends Controller
 
     public function edit(GoodsReceipt $goodsReceipt): View
     {
-        $goodsReceipt->load(['items.material.unit']);
+        if ($goodsReceipt->status === 'completed') {
+            abort(403, 'Goods Receipt yang sudah selesai tidak dapat diubah.');
+        }
+
+        $allowedTransitions = [
+            'draft' => ['draft', 'in_progress'],
+            'in_progress' => ['in_progress', 'completed'],
+        ];
+
+        $allowedStatuses = collect(self::STATUS_OPTIONS)
+            ->only($allowedTransitions[$goodsReceipt->status] ?? [])
+            ->toArray();
+
 
         return view('procurement.gr.edit', [
-            'goodsReceipt' => $goodsReceipt,
-            'purchaseOrders' => PurchaseOrder::with([
-                'items' => fn ($query) => $query->select('id', 'purchase_order_id', 'material_id', 'qty'),
-            ])
-                ->orderByDesc('order_date')
-                ->orderBy('code')
-                ->get(['id', 'code', 'project_id', 'supplier_id']),
+            'goodsReceipt' => $goodsReceipt->load(['items.material.unit']),
+            'purchaseOrders' => PurchaseOrder::whereIn('status', ['approved', 'partial'])->get(),
             'projects' => Project::orderBy('name')->get(['id', 'name', 'code']),
             'suppliers' => Supplier::orderBy('name')->get(['id', 'name', 'email']),
             'materials' => Material::with('unit')->orderBy('name')->get(),
-            'statuses' => self::STATUS_OPTIONS,
+            'statuses' => $allowedStatuses,
             'verifiers' => User::orderBy('name')->get(['id', 'name', 'email']),
             'title' => 'Ubah Goods Receipt',
             'user' => Auth::user(),
@@ -230,38 +258,85 @@ class GoodsReceiptController extends Controller
     {
         $validated = $this->validateGoodsReceipt($request, $goodsReceipt);
 
+        // Normalisasi ke integer untuk perbandingan
+        $requestPoId = !empty($validated['purchase_order_id'])
+            ? (int) $validated['purchase_order_id']
+            : null;
+
+        $existingPoId = $goodsReceipt->purchase_order_id
+            ? (int) $goodsReceipt->purchase_order_id
+            : null;
+
+        if ($requestPoId !== $existingPoId) {
+            return back()->with('error', 'Purchase Order tidak dapat diubah.');
+        }
+
         $items = $validated['items'];
         unset($validated['items']);
 
+        if (!empty($validated['purchase_order_id'])) {
+            $this->validateAgainstPurchaseOrder(
+                $items,
+                (int) $validated['purchase_order_id'],
+                $goodsReceipt->id
+            );
+        }
+
+        $oldStatus = $goodsReceipt->status;
+        $newStatus = $validated['status'];
+
         $attributes = [
-            'code' => $validated['code'],
-            'purchase_order_id' => $validated['purchase_order_id'] ?? null,
-            'project_id' => $validated['project_id'] ?? null,
-            'supplier_id' => $validated['supplier_id'] ?? null,
             'received_date' => $validated['received_date'],
-            'status' => $validated['status'],
+            'status' => $newStatus,
             'remarks' => $validated['remarks'] ?? null,
         ];
 
-        if (!empty($validated['verified_by'])) {
-            $attributes['verified_by'] = $validated['verified_by'];
-            $attributes['verified_at'] = $validated['verified_at'] ?? $goodsReceipt->verified_at ?? now();
+        if ($newStatus === 'completed') {
+            if (!empty($validated['verified_by'])) {
+                $attributes['verified_by'] = $validated['verified_by'];
+                $attributes['verified_at'] = $validated['verified_at'] ?? now();
+            } elseif (empty($goodsReceipt->verified_by)) {
+                $attributes['verified_by'] = Auth::id();
+                $attributes['verified_at'] = now();
+            }
         } else {
-            $attributes['verified_by'] = null;
-            $attributes['verified_at'] = null;
+            if (!empty($validated['verified_by'])) {
+                $attributes['verified_by'] = $validated['verified_by'];
+                $attributes['verified_at'] = $validated['verified_at'] ?? now();
+            } else {
+                $attributes['verified_by'] = null;
+                $attributes['verified_at'] = null;
+            }
         }
 
         $actorId = Auth::id();
 
-        DB::transaction(function () use ($goodsReceipt, $attributes, $items, $actorId) {
-            $this->stockMovements->purgeGoodsReceipt($goodsReceipt);
+        DB::transaction(function () use (
+            $goodsReceipt,
+            $attributes,
+            $items,
+            $actorId,
+            $oldStatus,
+            $newStatus
+        ) {
+            if ($oldStatus === 'completed') {
+                $this->stockMovements->purgeGoodsReceipt($goodsReceipt);
+            }
 
             $goodsReceipt->update($attributes);
             $goodsReceipt->items()->delete();
-            $createdItems = $goodsReceipt->items()->createMany($items);
-            $goodsReceipt->setRelation('items', collect($createdItems));
+            $goodsReceipt->items()->createMany($items);
 
-            $this->stockMovements->syncGoodsReceipt($goodsReceipt, $actorId);
+            if ($newStatus === 'completed') {
+                $this->stockMovements->syncGoodsReceipt($goodsReceipt, $actorId);
+            }
+
+            if (
+                $goodsReceipt->purchase_order_id &&
+                $newStatus === 'completed'
+            ) {
+                $this->syncPurchaseOrderStatus($goodsReceipt->purchaseOrder);
+            }
         });
 
         return redirect()
@@ -271,6 +346,10 @@ class GoodsReceiptController extends Controller
 
     public function destroy(GoodsReceipt $goodsReceipt): RedirectResponse
     {
+        if ($goodsReceipt->status === 'completed') {
+            return back()->with('error', 'Goods Receipt yang sudah selesai tidak dapat dihapus.');
+        }
+
         DB::transaction(function () use ($goodsReceipt) {
             $this->stockMovements->purgeGoodsReceipt($goodsReceipt);
             $goodsReceipt->items()->delete();
@@ -284,15 +363,18 @@ class GoodsReceiptController extends Controller
 
     protected function validateGoodsReceipt(Request $request, ?GoodsReceipt $goodsReceipt = null): array
     {
-        $statuses = array_keys(self::STATUS_OPTIONS);
+        if ($goodsReceipt) {
+            $allowedTransitions = [
+                'draft' => ['draft', 'in_progress'],
+                'in_progress' => ['in_progress', 'completed'],
+            ];
+
+            $statuses = $allowedTransitions[$goodsReceipt->status] ?? [];
+        } else {
+            $statuses = ['draft'];
+        }
 
         $validator = Validator::make($request->all(), [
-            'code' => [
-                'required',
-                'string',
-                'max:50',
-                Rule::unique('goods_receipts', 'code')->ignore($goodsReceipt?->getKey()),
-            ],
             'purchase_order_id' => ['nullable', 'exists:purchase_orders,id'],
             'project_id' => ['nullable', 'exists:projects,id'],
             'supplier_id' => ['nullable', 'exists:suppliers,id'],
@@ -336,7 +418,7 @@ class GoodsReceiptController extends Controller
                     'purchase_order_item_id' => $item['purchase_order_item_id'] ?? null,
                 ];
             })
-            ->filter(fn ($item) => !empty($item['material_id']) && !empty($item['qty']))
+            ->filter(fn($item) => !empty($item['material_id']) && !empty($item['qty']))
             ->map(function ($item) {
                 $qty = round((float) $item['qty'], 2);
                 $returnedQty = round((float) max($item['returned_qty'] ?? 0, 0), 2);
@@ -356,4 +438,195 @@ class GoodsReceiptController extends Controller
             ->values()
             ->all();
     }
+
+    protected function validateAgainstPurchaseOrder(
+        array $items,
+        int $poId,
+        ?int $ignoreGoodsReceiptId = null
+    ): void {
+        $po = PurchaseOrder::with('items')->find($poId);
+
+        if (!$po) {
+            throw ValidationException::withMessages([
+                'purchase_order_id' => 'Purchase Order tidak ditemukan.',
+            ]);
+        }
+
+        // Buat map dari PO items berdasarkan purchase_order_item_id
+        $poItemsMap = collect($po->items)->keyBy('id');
+
+        foreach ($items as $index => $item) {
+
+            if (empty($item['purchase_order_item_id'])) {
+                continue;
+            }
+
+            $poItemId = $item['purchase_order_item_id'];
+            $requestedQty = (float) $item['qty'];
+            $materialId = $item['material_id'];
+
+            $poItem = $poItemsMap->get($poItemId);
+
+            if (!$poItem) {
+                throw ValidationException::withMessages([
+                    "items.$index.material_id" => "Material tidak terdapat dalam Purchase Order.",
+                ]);
+            }
+
+            if ((int) $poItem->material_id !== (int) $materialId) {
+                throw ValidationException::withMessages([
+                    "items.$index.material_id" => "Material tidak sesuai dengan Purchase Order item.",
+                ]);
+            }
+
+            // $poItem = DB::table('purchase_order_items')
+            //     ->where('id', $item['purchase_order_item_id'])
+            //     ->where('purchase_order_id', $poId)
+            //     ->first();
+
+            // if (!$poItem) {
+            //     continue;
+            // }
+
+            $query = DB::table('goods_receipt_items')
+                ->join('goods_receipts', 'goods_receipt_items.goods_receipt_id', '=', 'goods_receipts.id')
+                ->where('goods_receipts.purchase_order_id', $poId)
+                ->whereIn('goods_receipts.status', ['draft', 'in_progress', 'completed'])
+                ->where('goods_receipt_items.purchase_order_item_id', $poItemId);
+
+            if ($ignoreGoodsReceiptId) {
+                $query->where('goods_receipts.id', '!=', $ignoreGoodsReceiptId);
+            }
+
+            $grTotals = $query->selectRaw('
+            SUM(goods_receipt_items.qty) as total_received,
+            SUM(goods_receipt_items.returned_qty) as total_returned
+            ')->first();
+
+            $totalReceived = (float) ($grTotals->total_received ?? 0);
+            $totalReturned = (float) ($grTotals->total_returned ?? 0);
+
+            $effectiveReceived = max($totalReceived - $totalReturned, 0);
+
+            $remainingQty = round($poItem->qty - $effectiveReceived, 2);
+
+            // $receivedQty = (float) $query->sum('goods_receipt_items.qty');
+            // $remainingQty = round($poItem->qty - $receivedQty, 2);
+
+            // if ($item['qty'] > $remainingQty) {
+            //     throw ValidationException::withMessages([
+            //         "items.$index.qty" => "Jumlah melebihi sisa PO ({$remainingQty}). Total GR lain: {$receivedQty}",
+            //     ]);
+            // }
+            if ($requestedQty > $remainingQty) {
+                $material = Material::find($materialId);
+                $materialName = $material ? $material->name : "Material ID {$materialId}";
+
+                throw ValidationException::withMessages([
+                    "items.$index.qty" =>
+                    "Jumlah {$materialName} melebihi sisa PO. " .
+                        "Sisa: {$remainingQty}, " .
+                        "PO: {$poItem->qty}, " .
+                        "Diterima: {$totalReceived}, " .
+                        "Retur: {$totalReturned}, " .
+                        "Efektif: {$effectiveReceived}",
+                ]);
+            }
+
+            foreach ($items as $index => $item) {
+                $materialId = $item['material_id'];
+
+                // Jika ada purchase_order_item_id, sudah divalidasi di atas
+                if (!empty($item['purchase_order_item_id'])) {
+                    continue;
+                }
+
+                // Jika tidak ada purchase_order_item_id, cek apakah material ada di PO
+                $poHasMaterial = $poItemsMap->contains(function ($poItem) use ($materialId) {
+                    return (int) $poItem->material_id === (int) $materialId;
+                });
+
+                if (!$poHasMaterial) {
+                    $material = Material::find($materialId);
+                    $materialName = $material ? $material->name : "Material ID {$materialId}";
+
+                    throw ValidationException::withMessages([
+                        "items.$index.material_id" =>
+                        "{$materialName} tidak terdapat dalam Purchase Order yang dipilih.",
+                    ]);
+                }
+            }
+            // if ($item['qty'] > $remainingQty) {
+            //     throw ValidationException::withMessages([
+            //         "items.$index.qty" => "Jumlah melebihi sisa PO ({$remainingQty}). Total efektif diterima: {$effectiveReceived} (Diterima: {$totalReceived}, Retur: {$totalReturned})",
+            //     ]);
+            // }
+        }
+    }
+
+    protected function syncPurchaseOrderStatus(PurchaseOrder $po): void
+    {
+        $poItems = $po->items;
+        $allReceived = true;
+
+        foreach ($poItems as $item) {
+            $grTotals = DB::table('goods_receipt_items')
+                ->join('goods_receipts', 'goods_receipt_items.goods_receipt_id', '=', 'goods_receipts.id')
+                ->where('goods_receipts.purchase_order_id', $po->id)
+                ->where('goods_receipts.status', 'completed')
+                ->where('goods_receipt_items.purchase_order_item_id', $item->id)
+                ->selectRaw('SUM(goods_receipt_items.qty) as total_received, SUM(goods_receipt_items.returned_qty) as total_returned')
+                ->first();
+
+            $effectiveReceived = max(
+                (float) ($grTotals->total_received ?? 0) - (float) ($grTotals->total_returned ?? 0),
+                0
+            );
+
+            $remainingQty = max($item->qty - $effectiveReceived, 0);
+
+            if ($remainingQty > 0) {
+                $allReceived = false;
+                break;
+            }
+        }
+
+        $po->update([
+            'status' => $allReceived ? 'received' : 'partial',
+            'received_at' => $allReceived ? now() : null,
+        ]);
+    }
+
+
+    // protected function syncPurchaseOrderStatus(PurchaseOrder $po): void
+    // {
+    //     $poItems = $po->items;
+
+    //     $allReceived = true;
+
+    //     foreach ($poItems as $item) {
+    //         $receivedQty = DB::table('goods_receipt_items')
+    //             ->join('goods_receipts', 'goods_receipt_items.goods_receipt_id', '=', 'goods_receipts.id')
+    //             ->where('goods_receipts.purchase_order_id', $po->id)
+    //             ->where('goods_receipts.status', 'completed')
+    //             ->where('goods_receipt_items.purchase_order_item_id', $item->id)
+    //             ->sum('goods_receipt_items.qty');
+
+    //         if ($receivedQty < $item->qty) {
+    //             $allReceived = false;
+    //             break;
+    //         }
+    //     }
+
+    //     if ($allReceived) {
+    //         $po->update([
+    //             'status' => 'received',
+    //             'received_at' => now(),
+    //         ]);
+    //     } else {
+    //         $po->update([
+    //             'status' => 'partial',
+    //         ]);
+    //     }
+    // }
 }

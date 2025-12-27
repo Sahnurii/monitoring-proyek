@@ -144,13 +144,13 @@
                                     <td>
                                         <div>{{ optional($supplier->created_at)->format('d M Y') }}</div>
                                         <div class="text-muted small">
-                                            {{ optional($supplier->created_at)->format('H:i') }} WIB
+                                            {{ optional($supplier->created_at)->format('H:i') }} WITA
                                         </div>
                                     </td>
                                     <td>
                                         <div>{{ optional($supplier->updated_at)->format('d M Y') }}</div>
                                         <div class="text-muted small">
-                                            {{ optional($supplier->updated_at)->format('H:i') }} WIB
+                                            {{ optional($supplier->updated_at)->format('H:i') }} WITA
                                         </div>
                                     </td>
                                     <td class="text-end">

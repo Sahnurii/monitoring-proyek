@@ -24,7 +24,7 @@ class MaterialStockController extends Controller
                 DB::raw('SUM(goods_receipt_items.qty - goods_receipt_items.returned_qty) as total_received'),
             )
             ->join('goods_receipts', 'goods_receipt_items.goods_receipt_id', '=', 'goods_receipts.id')
-            ->whereIn('goods_receipts.status', ['in_progress', 'completed'])
+            ->where('goods_receipts.status', 'completed')
             ->groupBy('goods_receipt_items.material_id');
 
         $issueTotals = GoodsIssueItem::query()

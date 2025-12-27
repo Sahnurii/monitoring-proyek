@@ -20,7 +20,7 @@
                 @include('procurement.gr.partials.form', [
                     'action' => route('procurement.goods-receipts.store'),
                     'method' => null,
-                    'goodsReceipt' => null,
+                    'goodsReceipt' => $goodsReceipt,
                     'purchaseOrders' => $purchaseOrders,
                     'projects' => $projects,
                     'suppliers' => $suppliers,

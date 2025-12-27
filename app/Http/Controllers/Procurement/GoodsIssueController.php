@@ -17,6 +17,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
+
 class GoodsIssueController extends Controller
 {
     private const STATUS_OPTIONS = [
@@ -25,9 +26,7 @@ class GoodsIssueController extends Controller
         'returned' => 'Dikembalikan',
     ];
 
-    public function __construct(private StockMovementService $stockMovements)
-    {
-    }
+    public function __construct(private StockMovementService $stockMovements) {}
 
     public function index(Request $request): View
     {
@@ -86,8 +85,13 @@ class GoodsIssueController extends Controller
 
     public function create(): View
     {
+        $activeProjects = Project::query()
+            ->whereIn('status', ['planned', 'ongoing'])
+            ->orderBy('name')
+            ->get(['id', 'name', 'code']);
+
         return view('procurement.gi.create', [
-            'projects' => Project::orderBy('name')->get(['id', 'name', 'code']),
+            'projects' => $activeProjects,
             'materials' => Material::with('unit')->orderBy('name')->get(),
             'statuses' => self::STATUS_OPTIONS,
             'title' => 'Buat Goods Issue',
@@ -102,11 +106,33 @@ class GoodsIssueController extends Controller
         $items = $validated['items'];
         unset($validated['items']);
 
+        $materialIds = collect($items)->pluck('material_id')->unique();
+        $materials = Material::whereIn('id', $materialIds)->get()->keyBy('id');
+
+        $currentStocks = $this->getCurrentStock($materialIds->toArray());
+
+        foreach ($items as $index => $item) {
+            $material = $materials[$item['material_id']] ?? null;
+            if (!$material) continue;
+
+            $currentStock = $currentStocks[$item['material_id']] ?? 0;
+
+            if ($item['qty'] > $currentStock) {
+                return back()
+                    ->withInput()
+                    ->withErrors([
+                        "items.{$index}.qty" => "Jumlah pengeluaran melebihi stok saat ini ({$currentStock}) untuk material {$material->name}."
+                    ]);
+            }
+        }
+
         $attributes = [
             'code' => $validated['code'],
             'project_id' => $validated['project_id'],
             'issued_date' => $validated['issued_date'],
-            'status' => $validated['status'],
+            'status' => Auth::user()->role->role_name === 'admin'
+                ? $validated['status']
+                : 'draft',
             'issued_by' => Auth::id(),
             'remarks' => $validated['remarks'] ?? null,
         ];
@@ -156,10 +182,34 @@ class GoodsIssueController extends Controller
 
     public function update(Request $request, GoodsIssue $goodsIssue): RedirectResponse
     {
+        if (Auth::user()->role->role_name !== 'admin') {
+            abort(403, 'Anda tidak berhak mengubah Goods Issue');
+        }
+
         $validated = $this->validateGoodsIssue($request, $goodsIssue);
 
         $items = $validated['items'];
         unset($validated['items']);
+
+        $materialIds = collect($items)->pluck('material_id')->unique();
+        $materials = Material::whereIn('id', $materialIds)->get()->keyBy('id');
+
+        $currentStocks = $this->getCurrentStock($materialIds->toArray());
+
+        foreach ($items as $index => $item) {
+            $material = $materials[$item['material_id']] ?? null;
+            if (!$material) continue;
+
+            $currentStock = $currentStocks[$item['material_id']] ?? 0;
+
+            if ($item['qty'] > $currentStock) {
+                return back()
+                    ->withInput()
+                    ->withErrors([
+                        "items.{$index}.qty" => "Jumlah pengeluaran melebihi stok saat ini ({$currentStock}) untuk material {$material->name}."
+                    ]);
+            }
+        }
 
         $attributes = [
             'code' => $validated['code'],
@@ -189,6 +239,12 @@ class GoodsIssueController extends Controller
 
     public function destroy(GoodsIssue $goodsIssue): RedirectResponse
     {
+        if ($goodsIssue->status !== 'draft') {
+            return redirect()
+                ->route('procurement.goods-issues.index')
+                ->with('error', 'Goods Issue hanya dapat dihapus jika statusnya masih draft.');
+        }
+
         DB::transaction(function () use ($goodsIssue) {
             $this->stockMovements->purgeGoodsIssue($goodsIssue);
             $goodsIssue->items()->delete();
@@ -258,5 +314,33 @@ class GoodsIssueController extends Controller
             ->all();
 
         return $validated;
+    }
+
+    private function getCurrentStock(array $materialIds): array
+    {
+        $receiptTotals = DB::table('goods_receipt_items')
+            ->join('goods_receipts', 'goods_receipt_items.goods_receipt_id', '=', 'goods_receipts.id')
+            ->where('goods_receipts.status', 'completed')
+            ->whereIn('goods_receipt_items.material_id', $materialIds)
+            ->select('goods_receipt_items.material_id', DB::raw('SUM(goods_receipt_items.qty - goods_receipt_items.returned_qty) as total_received'))
+            ->groupBy('goods_receipt_items.material_id')
+            ->pluck('total_received', 'material_id')
+            ->toArray();
+
+        $issueTotals = DB::table('goods_issue_items')
+            ->join('goods_issues', 'goods_issue_items.goods_issue_id', '=', 'goods_issues.id')
+            ->where('goods_issues.status', 'issued')
+            ->whereIn('goods_issue_items.material_id', $materialIds)
+            ->select('goods_issue_items.material_id', DB::raw('SUM(goods_issue_items.qty) as total_issued'))
+            ->groupBy('goods_issue_items.material_id')
+            ->pluck('total_issued', 'material_id')
+            ->toArray();
+
+        $currentStock = [];
+        foreach ($materialIds as $id) {
+            $currentStock[$id] = ($receiptTotals[$id] ?? 0) - ($issueTotals[$id] ?? 0);
+        }
+
+        return $currentStock;
     }
 }

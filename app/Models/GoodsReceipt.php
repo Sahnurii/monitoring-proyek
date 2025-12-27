@@ -62,4 +62,19 @@ class GoodsReceipt extends Model
     {
         return $this->hasMany(GoodsReceiptItem::class);
     }
+
+    public static function generateCode(): string
+    {
+        $prefix = 'GR-' . now()->format('Ym');
+
+        $last = self::where('code', 'like', $prefix . '%')
+            ->orderByDesc('code')
+            ->first();
+
+        $number = $last
+            ? (int) substr($last->code, -4) + 1
+            : 1;
+
+        return $prefix . str_pad($number, 4, '0', STR_PAD_LEFT);
+    }
 }

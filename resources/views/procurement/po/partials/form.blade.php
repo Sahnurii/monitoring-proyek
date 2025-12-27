@@ -1,25 +1,23 @@
 @php
     $order = $purchaseOrder ?? null;
     $defaultItems = $order
-        ? $order->items->map(function ($item) {
-            return [
-                'material_id' => $item->material_id,
-                'qty' => $item->qty,
-                'price' => $item->price,
-            ];
-        })->toArray()
+        ? $order->items
+            ->map(function ($item) {
+                return [
+                    'material_id' => $item->material_id,
+                    'qty' => $item->qty,
+                    'price' => $item->price,
+                ];
+            })
+            ->toArray()
         : [];
     $oldItems = old('items', $defaultItems);
     if (empty($oldItems)) {
-        $oldItems = [
-            ['material_id' => null, 'qty' => null, 'price' => null],
-        ];
+        $oldItems = [['material_id' => null, 'qty' => null, 'price' => null]];
     }
     $oldItems = array_values($oldItems);
     $nextIndex = count($oldItems);
-    $defaultOrderDate = $order && $order->order_date
-        ? $order->order_date->format('Y-m-d')
-        : now()->format('Y-m-d');
+    $defaultOrderDate = $order && $order->order_date ? $order->order_date->format('Y-m-d') : now()->format('Y-m-d');
     $defaultOrderDate = old('order_date', $defaultOrderDate);
     $currentStatus = old('status', $order->status ?? 'draft');
     $totalAmount = 0;
@@ -57,29 +55,29 @@
     </div>
 @endif
 
-<form action="{{ $action }}" method="POST" class="row g-4" data-po-items-container data-next-index="{{ $nextIndex }}">
+<form action="{{ $action }}" method="POST" class="row g-4" data-po-items-container
+    data-next-index="{{ $nextIndex }}">
     @csrf
     @if (!empty($method))
         @method($method)
     @endif
 
-    <div class="col-md-4">
+    {{-- <div class="col-md-4">
         <label for="code" class="form-label">Kode Purchase Order</label>
         <input type="text" id="code" name="code" value="{{ old('code', $order->code ?? '') }}"
             class="form-control @error('code') is-invalid @enderror" placeholder="Contoh: PO-001" required>
         @error('code')
             <div class="invalid-feedback">{{ $message }}</div>
         @enderror
-    </div>
+    </div> --}}
 
     <div class="col-md-4">
         <label for="supplier_id" class="form-label">Pemasok</label>
-        <select id="supplier_id" name="supplier_id"
-            class="form-select @error('supplier_id') is-invalid @enderror" required>
+        <select id="supplier_id" name="supplier_id" class="form-select @error('supplier_id') is-invalid @enderror"
+            required>
             <option value="">Pilih Pemasok</option>
             @foreach ($suppliers as $supplier)
-                <option value="{{ $supplier->id }}"
-                    @selected((string) old('supplier_id', $order->supplier_id ?? '') === (string) $supplier->id)>
+                <option value="{{ $supplier->id }}" @selected((string) old('supplier_id', $order->supplier_id ?? '') === (string) $supplier->id)>
                     {{ $supplier->name }}
                     @if ($supplier->email)
                         &mdash; {{ $supplier->email }}
@@ -97,8 +95,7 @@
         <select id="project_id" name="project_id" class="form-select @error('project_id') is-invalid @enderror">
             <option value="">Tanpa Proyek</option>
             @foreach ($projects as $project)
-                <option value="{{ $project->id }}"
-                    @selected((string) old('project_id', $order->project_id ?? '') === (string) $project->id)>
+                <option value="{{ $project->id }}" @selected((string) old('project_id', $order->project_id ?? '') === (string) $project->id)>
                     {{ $project->code }} &mdash; {{ $project->name }}
                 </option>
             @endforeach
@@ -114,8 +111,7 @@
             class="form-select @error('material_request_id') is-invalid @enderror">
             <option value="">Tidak Terhubung</option>
             @foreach ($materialRequests as $requestOption)
-                <option value="{{ $requestOption->id }}"
-                    @selected((string) old('material_request_id', $order->material_request_id ?? '') === (string) $requestOption->id)>
+                <option value="{{ $requestOption->id }}" @selected((string) old('material_request_id', $order->material_request_id ?? '') === (string) $requestOption->id)>
                     {{ $requestOption->code }}
                 </option>
             @endforeach
@@ -134,7 +130,7 @@
         @enderror
     </div>
 
-    <div class="col-md-4">
+    {{-- <div class="col-md-4">
         <label for="status" class="form-label">Status</label>
         <select id="status" name="status" class="form-select @error('status') is-invalid @enderror" required>
             @foreach ($statuses as $value => $label)
@@ -146,7 +142,7 @@
         @error('status')
             <div class="invalid-feedback">{{ $message }}</div>
         @enderror
-    </div>
+    </div> --}}
 
     <div class="col-12">
         <label class="form-label">Item Purchase Order</label>
@@ -180,8 +176,7 @@
                                             class="form-select @error('items.' . $index . '.material_id') is-invalid @enderror">
                                             <option value="">Pilih Material</option>
                                             @foreach ($materials as $material)
-                                                <option value="{{ $material->id }}"
-                                                    @selected((string) ($materialId ?? '') === (string) $material->id)>
+                                                <option value="{{ $material->id }}" @selected((string) ($materialId ?? '') === (string) $material->id)>
                                                     {{ $material->name }}
                                                     @if ($material->unit)
                                                         ({{ $material->unit->symbol ?? $material->unit->name }})
@@ -275,16 +270,16 @@
             </td>
             <td>
                 <div class="input-group">
-                    <input type="number" min="0" step="0.01" name="items[__INDEX__][qty]" data-field="qty"
-                        class="form-control" placeholder="0.00">
+                    <input type="number" min="0" step="0.01" name="items[__INDEX__][qty]"
+                        data-field="qty" class="form-control" placeholder="0.00">
                     <span class="input-group-text">qty</span>
                 </div>
             </td>
             <td>
                 <div class="input-group">
                     <span class="input-group-text">Rp</span>
-                    <input type="number" min="0" step="0.01" name="items[__INDEX__][price]" data-field="price"
-                        class="form-control" placeholder="0.00">
+                    <input type="number" min="0" step="0.01" name="items[__INDEX__][price]"
+                        data-field="price" class="form-control" placeholder="0.00">
                 </div>
             </td>
             <td class="text-end">
@@ -302,20 +297,33 @@
 @once
     @push('scripts')
         <script>
-            document.addEventListener('DOMContentLoaded', () => {
-                const materialRequestsData = @json($materialRequestDataset);
+            const materialRequestsData = @json($materialRequestDataset);
 
-                document.querySelectorAll('[data-po-items-container]').forEach((container) => {
-                    const tableBody = container.querySelector('[data-items-body]');
-                    const template = container.querySelector('#po-item-row-template');
-                    const totalElement = container.querySelector('[data-total-amount]');
-                    let nextIndex = Number(container.getAttribute('data-next-index')) || tableBody.children.length;
-                    const materialRequestSelect = container.querySelector('#material_request_id');
-                    const projectSelect = container.querySelector('#project_id');
+            document.querySelectorAll('[data-po-items-container]').forEach((container) => {
+                const tableBody = container.querySelector('[data-items-body]');
+                const template = container.querySelector('#po-item-row-template');
+                const totalElement = container.querySelector('[data-total-amount]');
+                let nextIndex = Number(container.getAttribute('data-next-index')) || tableBody.children
+                    .length;
+                const materialRequestSelect = container.querySelector('#material_request_id');
+                const projectSelect = container.querySelector('#project_id');
 
-                    if (!tableBody) {
-                        return;
-                    }
+                if (!tableBody) {
+                    return;
+                }
+
+                document.addEventListener('DOMContentLoaded', () => {
+                    const lockProject = (value = '') => {
+                        setSelectValue(projectSelect, value);
+                        projectSelect.dataset.locked = value ? 'true' : '';
+                        projectSelect.classList.toggle('select-locked', !!value);
+                    };
+
+                    projectSelect.addEventListener('mousedown', e => {
+                        if (projectSelect.dataset.locked === 'true') {
+                            e.preventDefault();
+                        }
+                    });
 
                     const currencyFormatter = new Intl.NumberFormat('id-ID', {
                         minimumFractionDigits: 2,
@@ -334,10 +342,13 @@
                             return;
                         }
 
-                        const normalized = value === null || value === undefined || value === '' ? '' : String(value);
+                        const normalized = value === null || value === undefined || value === '' ? '' :
+                            String(value);
                         if (select.value !== normalized) {
                             select.value = normalized;
-                            select.dispatchEvent(new Event('change', { bubbles: true }));
+                            select.dispatchEvent(new Event('change', {
+                                bubbles: true
+                            }));
                         }
                     };
 
@@ -348,7 +359,8 @@
 
                         const qty = parseFloat(qtyField?.value ?? '0');
                         const price = parseFloat(priceField?.value ?? '0');
-                        const subtotal = (Number.isFinite(qty) ? qty : 0) * (Number.isFinite(price) ? price : 0);
+                        const subtotal = (Number.isFinite(qty) ? qty : 0) * (Number.isFinite(price) ?
+                            price : 0);
 
                         row.dataset.subtotal = subtotal.toFixed(2);
 
@@ -389,7 +401,8 @@
                         const qtyField = row.querySelector('[data-field="qty"]');
                         const priceField = row.querySelector('[data-field="price"]');
 
-                        if (defaults.material_id !== undefined && defaults.material_id !== null && materialField) {
+                        if (defaults.material_id !== undefined && defaults.material_id !== null &&
+                            materialField) {
                             materialField.value = String(defaults.material_id);
                         }
 
@@ -483,6 +496,40 @@
                     });
 
                     const addButton = container.querySelector('[data-add-item]');
+                    const toggleManualControls = (fromMR) => {
+                        if (addButton) {
+                            addButton.style.display = fromMR ? 'none' : 'inline-block';
+                        }
+
+                        tableBody.querySelectorAll('tr').forEach(row => {
+                            row.querySelectorAll('input').forEach(input => {
+                                if (input.dataset.field === 'qty') {
+                                    input.readOnly = false;
+                                    return;
+                                }
+
+                                // price BOLEH
+                                if (input.dataset.field === 'price') return;
+
+                                input.readOnly = fromMR;
+                            });
+
+                            row.querySelectorAll('select').forEach(select => {
+
+                                if (fromMR) {
+                                    select.classList.add('select-locked');
+                                } else {
+                                    select.classList.remove('select-locked');
+                                }
+                            });
+
+                            const removeBtn = row.querySelector('[data-remove-item]');
+                            if (removeBtn) {
+                                removeBtn.style.display = fromMR ? 'none' : 'inline-block';
+                            }
+                        });
+                    };
+
                     if (addButton) {
                         addButton.addEventListener('click', () => {
                             addRow();
@@ -492,40 +539,35 @@
                     if (materialRequestSelect) {
                         materialRequestSelect.addEventListener('change', () => {
                             const selectedId = materialRequestSelect.value;
+
+                            // === jika PO MANUAL ===
                             if (!selectedId) {
+                                lockProject(''); // proyek kosong
+                                toggleManualControls(false); // item bebas
+                                clearItems();
+                                addRow();
                                 return;
                             }
 
                             const request = materialRequestsData[selectedId];
-                            if (!request) {
-                                return;
-                            }
+                            if (!request) return;
 
-                            setSelectValue(projectSelect, request.project_id ?? '');
+                            lockProject(request.project_id ?? '');
 
                             if (Array.isArray(request.items) && request.items.length > 0) {
                                 if (hasFilledItems()) {
-                                    const confirmReplace = window.confirm(
+                                    const confirmReplace = confirm(
                                         'Mengambil item dari permintaan material akan menggantikan daftar item saat ini. Lanjutkan?'
                                     );
-
-                                    if (!confirmReplace) {
-                                        return;
-                                    }
+                                    if (!confirmReplace) return;
                                 }
 
                                 populateFromMaterialRequest(request);
+                                toggleManualControls(true);
                             }
                         });
-
-                        if (materialRequestSelect.value && !hasFilledItems()) {
-                            const initialRequest = materialRequestsData[materialRequestSelect.value];
-                            if (initialRequest) {
-                                setSelectValue(projectSelect, initialRequest.project_id ?? '');
-                                populateFromMaterialRequest(initialRequest);
-                            }
-                        }
                     }
+
 
                     tableBody.querySelectorAll('tr').forEach((row) => {
                         recalcRow(row);

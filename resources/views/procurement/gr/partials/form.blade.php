@@ -4,54 +4,48 @@
     if ($receipt) {
         $receiptItems = collect();
         if (method_exists($receipt, 'items')) {
-            $receiptItems = $receipt->relationLoaded('items')
-                ? $receipt->items
-                : $receipt->items()->get();
+            $receiptItems = $receipt->relationLoaded('items') ? $receipt->items : $receipt->items()->get();
         } elseif (isset($receipt->items) && is_iterable($receipt->items)) {
             $receiptItems = collect($receipt->items);
         }
 
-        $defaultItems = $receiptItems->map(function ($item) {
-            return [
-                'material_id' => $item->material_id ?? null,
-                'qty' => $item->qty ?? null,
-                'returned_qty' => $item->returned_qty ?? 0,
-                'purchase_order_item_id' => $item->purchase_order_item_id ?? null,
-                'remarks' => $item->remarks ?? null,
-            ];
-        })->toArray();
+        $defaultItems = $receiptItems
+            ->map(function ($item) {
+                return [
+                    'material_id' => $item->material_id ?? null,
+                    'qty' => $item->qty ?? null,
+                    'returned_qty' => $item->returned_qty ?? 0,
+                    'purchase_order_item_id' => $item->purchase_order_item_id ?? null,
+                    'remarks' => $item->remarks ?? null,
+                ];
+            })
+            ->toArray();
     }
     $oldItems = old('items', $defaultItems);
     if (empty($oldItems)) {
-        $oldItems = [
-            ['material_id' => null, 'qty' => null, 'returned_qty' => 0, 'remarks' => null],
-        ];
+        $oldItems = [['material_id' => null, 'qty' => null, 'returned_qty' => 0, 'remarks' => null]];
     }
     $oldItems = array_values($oldItems);
     $nextIndex = count($oldItems);
 
-    $defaultReceivedDate = $receipt && $receipt->received_date
-        ? \Illuminate\Support\Carbon::parse($receipt->received_date)->format('Y-m-d')
-        : now()->format('Y-m-d');
+    $defaultReceivedDate =
+        $receipt && $receipt->received_date
+            ? \Illuminate\Support\Carbon::parse($receipt->received_date)->format('Y-m-d')
+            : now()->format('Y-m-d');
     $defaultReceivedDate = old('received_date', $defaultReceivedDate);
 
     $currentStatus = old('status', optional($receipt)->status ?? 'draft');
     $purchaseOrder = optional($receipt)->purchaseOrder;
     $selectedPurchaseOrderId = old('purchase_order_id', optional($receipt)->purchase_order_id);
-    $selectedProjectId = old(
-        'project_id',
-        optional($receipt)->project_id ?? optional($purchaseOrder)->project_id,
-    );
-    $selectedSupplierId = old(
-        'supplier_id',
-        optional($receipt)->supplier_id ?? optional($purchaseOrder)->supplier_id,
-    );
+    $selectedProjectId = old('project_id', optional($receipt)->project_id ?? optional($purchaseOrder)->project_id);
+    $selectedSupplierId = old('supplier_id', optional($receipt)->supplier_id ?? optional($purchaseOrder)->supplier_id);
 
     $verifierOptions = collect($verifiers ?? []);
     $selectedVerifierId = old('verified_by', $receipt->verified_by ?? null);
-    $defaultVerifiedAt = $receipt && $receipt->verified_at
-        ? \Illuminate\Support\Carbon::parse($receipt->verified_at)->format('Y-m-d\TH:i')
-        : null;
+    $defaultVerifiedAt =
+        $receipt && $receipt->verified_at
+            ? \Illuminate\Support\Carbon::parse($receipt->verified_at)->format('Y-m-d\TH:i')
+            : null;
     $defaultVerifiedAt = old('verified_at', $defaultVerifiedAt);
 
     $submitLabel = $submitLabel ?? 'Simpan Goods Receipt';
@@ -92,7 +86,7 @@
 @endif
 
 <form action="{{ $action }}" method="POST" class="row g-4" data-gr-items-container
-    data-next-index="{{ $nextIndex }}">
+    data-next-index="{{ $nextIndex }}" data-edit-mode="{{ $goodsReceipt->exists ? '1' : '0' }}">
     @csrf
     @if (!empty($method))
         @method($method)
@@ -100,29 +94,46 @@
 
     <div class="col-md-4">
         <label for="code" class="form-label">Kode Goods Receipt</label>
-        <input type="text" id="code" name="code" value="{{ old('code', $receipt->code ?? '') }}"
-            class="form-control @error('code') is-invalid @enderror" placeholder="Contoh: GR-001" required>
+
+        @if (!$goodsReceipt->exists)
+            <input type="text" id="code" name="code" value="{{ old('code') }}"
+                class="form-control @error('code') is-invalid @enderror" placeholder="Otomatis" readonly>
+        @else
+            <input type="text" class="form-control" value="{{ $goodsReceipt->code }}" disabled>
+            <input type="hidden" name="code" value="{{ $goodsReceipt->code }}">
+        @endif
+
         @error('code')
             <div class="invalid-feedback">{{ $message }}</div>
         @enderror
     </div>
-
     <div class="col-md-4">
         <label for="purchase_order_id" class="form-label">Purchase Order</label>
-        <select id="purchase_order_id" name="purchase_order_id"
-            class="form-select @error('purchase_order_id') is-invalid @enderror">
-            <option value="">Tidak Terhubung</option>
-            @foreach ($purchaseOrders as $order)
-                <option value="{{ $order->id }}"
-                    @selected((string) $selectedPurchaseOrderId === (string) $order->id)>
-                    {{ $order->code }}
-                </option>
-            @endforeach
-        </select>
+
+        @if (!$goodsReceipt->exists)
+            {{-- CREATE --}}
+            <select id="purchase_order_id" name="purchase_order_id"
+                class="form-select @error('purchase_order_id') is-invalid @enderror" required>
+                <option value="">Pilih Purchase Order</option>
+                @foreach ($purchaseOrders as $order)
+                    <option value="{{ $order->id }}" @selected(old('purchase_order_id') == $order->id)>
+                        {{ $order->code }}
+                    </option>
+                @endforeach
+            </select>
+        @else
+            {{-- EDIT --}}
+            <select class="form-select" disabled>
+                <option>{{ $goodsReceipt->purchaseOrder?->code ?? 'Tidak Terhubung' }}</option>
+            </select>
+            <input type="hidden" name="purchase_order_id" value="{{ $goodsReceipt->purchase_order_id }}">
+        @endif
+
         @error('purchase_order_id')
             <div class="invalid-feedback">{{ $message }}</div>
         @enderror
     </div>
+
 
     <div class="col-md-4">
         <label for="received_date" class="form-label">Tanggal Penerimaan</label>
@@ -135,68 +146,81 @@
 
     <div class="col-md-4">
         <label for="project_id" class="form-label">Proyek</label>
-        <select id="project_id" name="project_id" class="form-select @error('project_id') is-invalid @enderror">
-            <option value="">Tanpa Proyek</option>
-            @foreach ($projects as $project)
-                <option value="{{ $project->id }}"
-                    @selected((string) $selectedProjectId === (string) $project->id)>
-                    {{ $project->code }} &mdash; {{ $project->name }}
+
+        @if ($goodsReceipt->exists)
+            <select class="form-select" disabled>
+                <option>
+                    {{ optional($goodsReceipt->project)->code ?? '-' }}
+                    — {{ optional($goodsReceipt->project)->name ?? 'Tanpa Proyek' }}
                 </option>
-            @endforeach
-        </select>
+            </select>
+            <input type="hidden" name="project_id" value="{{ $goodsReceipt->project_id }}">
+        @else
+            <input type="text" id="project_display" class="form-control" placeholder="Otomatis dari PO" disabled>
+            <input type="hidden" id="project_id" name="project_id">
+        @endif
+
         @error('project_id')
             <div class="invalid-feedback">{{ $message }}</div>
         @enderror
     </div>
 
+
     <div class="col-md-4">
         <label for="supplier_id" class="form-label">Pemasok</label>
-        <select id="supplier_id" name="supplier_id"
-            class="form-select @error('supplier_id') is-invalid @enderror">
-            <option value="">Tanpa Pemasok</option>
-            @foreach ($suppliers as $supplier)
-                <option value="{{ $supplier->id }}"
-                    @selected((string) $selectedSupplierId === (string) $supplier->id)>
-                    {{ $supplier->name }}
-                    @if (!empty($supplier->email))
-                        &mdash; {{ $supplier->email }}
-                    @endif
-                </option>
-            @endforeach
-        </select>
+
+        @if ($goodsReceipt->exists)
+            <select class="form-select" disabled>
+                <option>{{ optional($goodsReceipt->supplier)->name ?? 'Tanpa Pemasok' }}</option>
+            </select>
+            <input type="hidden" name="supplier_id" value="{{ $goodsReceipt->supplier_id }}">
+        @else
+            <input type="text" id="supplier_display" class="form-control" placeholder="Otomatis dari PO" disabled>
+            <input type="hidden" id="supplier_id" name="supplier_id">
+        @endif
+
+
         @error('supplier_id')
             <div class="invalid-feedback">{{ $message }}</div>
         @enderror
     </div>
 
+
     <div class="col-md-4">
-        <label for="status" class="form-label">Status</label>
-        <select id="status" name="status" class="form-select @error('status') is-invalid @enderror" required>
-            @foreach ($statuses as $value => $label)
-                <option value="{{ $value }}"
-                    @selected((string) $currentStatus === (string) $value)>
-                    {{ $label }}
-                </option>
-            @endforeach
-        </select>
+        <label class="form-label">Status</label>
+
+        @if (!$goodsReceipt->exists)
+            {{-- CREATE --}}
+            <input type="hidden" name="status" value="draft">
+            <input type="text" class="form-control" value="Draft" disabled>
+        @else
+            {{-- EDIT --}}
+            <select name="status" class="form-select @error('status') is-invalid @enderror" required>
+                @foreach ($statuses as $value => $label)
+                    <option value="{{ $value }}" @selected(old('status', $goodsReceipt->status) === $value)>
+                        {{ $label }}
+                    </option>
+                @endforeach
+            </select>
+        @endif
+
         @error('status')
             <div class="invalid-feedback">{{ $message }}</div>
         @enderror
     </div>
 
+
     <div class="col-md-4">
         <label for="verified_by" class="form-label">Diverifikasi Oleh</label>
-        <select id="verified_by" name="verified_by"
-            class="form-select @error('verified_by') is-invalid @enderror">
+        <select id="verified_by" name="verified_by" class="form-select @error('verified_by') is-invalid @enderror">
             <option value="">Belum Diverifikasi</option>
             @foreach ($verifierOptions as $verifier)
                 @php
-                    $verifierId = is_object($verifier) ? $verifier->id : ($verifier['id'] ?? null);
-                    $verifierName = is_object($verifier) ? $verifier->name : ($verifier['name'] ?? $verifierId);
-                    $verifierEmail = is_object($verifier) ? $verifier->email : ($verifier['email'] ?? null);
+                    $verifierId = is_object($verifier) ? $verifier->id : $verifier['id'] ?? null;
+                    $verifierName = is_object($verifier) ? $verifier->name : $verifier['name'] ?? $verifierId;
+                    $verifierEmail = is_object($verifier) ? $verifier->email : $verifier['email'] ?? null;
                 @endphp
-                <option value="{{ $verifierId }}"
-                    @selected($verifierId !== null && (string) $selectedVerifierId === (string) $verifierId)>
+                <option value="{{ $verifierId }}" @selected($verifierId !== null && (string) $selectedVerifierId === (string) $verifierId)>
                     {{ $verifierName }}
                     @if ($verifierEmail)
                         &mdash; {{ $verifierEmail }}
@@ -246,26 +270,24 @@
                             @foreach ($oldItems as $index => $item)
                                 <tr data-row>
                                     <td>
-                                        <select name="items[{{ $index }}][material_id]" data-field="material_id"
-                                            class="form-select @error('items.' . $index . '.material_id') is-invalid @enderror">
-                                            <option value="">Pilih Material</option>
-                                        @foreach ($materials as $material)
-                                            <option value="{{ $material->id }}"
-                                                @selected((string) ($item['material_id'] ?? '') === (string) $material->id)>
-                                                {{ $material->name }}
-                                                @if ($material->unit)
-                                                    ({{ $material->unit->symbol ?? $material->unit->name }})
+                                        <select name="items[{{ $index }}][material_id]_display"
+                                            class="form-select" disabled>
+                                            <option>
+                                                {{ optional($materials->firstWhere('id', $item['material_id']))->name }}
+                                                @if (optional($materials->firstWhere('id', $item['material_id']))?->unit)
+                                                    ({{ optional($materials->firstWhere('id', $item['material_id']))->unit->symbol }})
                                                 @endif
                                             </option>
-                                        @endforeach
                                         </select>
-                                        <input type="hidden" name="items[{{ $index }}][purchase_order_item_id]"
-                                            data-field="purchase_order_item_id"
-                                            value="{{ old('items.' . $index . '.purchase_order_item_id', $item['purchase_order_item_id'] ?? '') }}">
-                                        @error('items.' . $index . '.material_id')
-                                            <div class="invalid-feedback">{{ $message }}</div>
-                                        @enderror
+
+                                        <input type="hidden" name="items[{{ $index }}][material_id]"
+                                            value="{{ $item['material_id'] }}">
+
+                                        <input type="hidden"
+                                            name="items[{{ $index }}][purchase_order_item_id]"
+                                            value="{{ $item['purchase_order_item_id'] ?? '' }}">
                                     </td>
+
                                     <td>
                                         <div class="input-group">
                                             <input type="number" min="0" step="0.01"
@@ -282,8 +304,8 @@
                                     <td>
                                         <div class="input-group">
                                             <input type="number" min="0" step="0.01"
-                                                name="items[{{ $index }}][returned_qty]" data-field="returned_qty"
-                                                value="{{ $item['returned_qty'] ?? 0 }}"
+                                                name="items[{{ $index }}][returned_qty]"
+                                                data-field="returned_qty" value="{{ $item['returned_qty'] ?? 0 }}"
                                                 class="form-control @error('items.' . $index . '.returned_qty') is-invalid @enderror"
                                                 placeholder="0.00">
                                             <span class="input-group-text">qty</span>
@@ -293,9 +315,9 @@
                                         @enderror
                                     </td>
                                     <td>
-                                        <input type="text" name="items[{{ $index }}][remarks]" data-field="remarks"
-                                            value="{{ $item['remarks'] ?? '' }}" class="form-control"
-                                            placeholder="Catatan tambahan">
+                                        <input type="text" name="items[{{ $index }}][remarks]"
+                                            data-field="remarks" value="{{ $item['remarks'] ?? '' }}"
+                                            class="form-control" placeholder="Catatan tambahan">
                                     </td>
                                     <td class="text-center">
                                         <button type="button" class="btn btn-sm btn-outline-danger" data-remove-item>
@@ -308,9 +330,11 @@
                     </table>
                 </div>
 
-                <button type="button" class="btn btn-outline-primary mt-3" data-add-item>
-                    <i class="bi bi-plus-lg me-2"></i>Tambah Baris Item
-                </button>
+                @if (!$goodsReceipt->exists)
+                    <button type="button" class="btn btn-outline-primary mt-3" data-add-item>
+                        <i class="bi bi-plus-lg me-2"></i>Tambah Baris Item
+                    </button>
+                @endif
 
                 @error('items')
                     <div class="text-danger small mt-2">{{ $message }}</div>
@@ -338,13 +362,13 @@
                         </option>
                     @endforeach
                 </select>
-                <input type="hidden" name="items[__INDEX__][purchase_order_item_id]" data-field="purchase_order_item_id"
-                    value="">
+                <input type="hidden" name="items[__INDEX__][purchase_order_item_id]"
+                    data-field="purchase_order_item_id" value="">
             </td>
             <td>
                 <div class="input-group">
-                    <input type="number" min="0" step="0.01" name="items[__INDEX__][qty]" data-field="qty"
-                        class="form-control" placeholder="0.00">
+                    <input type="number" min="0" step="0.01" name="items[__INDEX__][qty]"
+                        data-field="qty" class="form-control" placeholder="0.00">
                     <span class="input-group-text">qty</span>
                 </div>
             </td>
@@ -360,9 +384,12 @@
                     placeholder="Catatan tambahan">
             </td>
             <td class="text-center">
-                <button type="button" class="btn btn-sm btn-outline-danger" data-remove-item>
-                    <i class="bi bi-x-lg"></i>
-                </button>
+                @if (!$goodsReceipt->exists)
+                    <button type="button" class="btn btn-sm btn-outline-danger" data-remove-item>
+                        <i class="bi bi-x-lg"></i>
+                    </button>
+                @endif
+
             </td>
         </tr>
     </template>
@@ -384,7 +411,8 @@
                     const purchaseOrderSelect = container.querySelector('#purchase_order_id');
                     const projectSelect = container.querySelector('#project_id');
                     const supplierSelect = container.querySelector('#supplier_id');
-                    let nextIndex = Number(container.getAttribute('data-next-index')) || tableBody.children.length;
+                    let nextIndex = Number(container.getAttribute('data-next-index')) || tableBody.children
+                        .length;
                     let previousOrderId = purchaseOrderSelect ? purchaseOrderSelect.value : '';
 
                     const updateNextIndex = (value) => {
@@ -397,10 +425,13 @@
                             return;
                         }
 
-                        const normalized = value === null || value === undefined || value === '' ? '' : String(value);
+                        const normalized = value === null || value === undefined || value === '' ? '' :
+                            String(value);
                         if (select.value !== normalized) {
                             select.value = normalized;
-                            select.dispatchEvent(new Event('change', { bubbles: true }));
+                            select.dispatchEvent(new Event('change', {
+                                bubbles: true
+                            }));
                         }
                     };
 
@@ -424,7 +455,8 @@
                         const remarksField = row.querySelector('[data-field="remarks"]');
                         const poItemField = row.querySelector('[data-field="purchase_order_item_id"]');
 
-                        if (defaults.material_id !== undefined && defaults.material_id !== null && materialField) {
+                        if (defaults.material_id !== undefined && defaults.material_id !== null &&
+                            materialField) {
                             materialField.value = String(defaults.material_id);
                         }
 
@@ -432,7 +464,8 @@
                             qtyField.value = defaults.qty;
                         }
 
-                        if (defaults.returned_qty !== undefined && defaults.returned_qty !== null && returnedField) {
+                        if (defaults.returned_qty !== undefined && defaults.returned_qty !== null &&
+                            returnedField) {
                             returnedField.value = defaults.returned_qty;
                         }
 
@@ -440,7 +473,8 @@
                             remarksField.value = defaults.remarks;
                         }
 
-                        if (defaults.purchase_order_item_id !== undefined && defaults.purchase_order_item_id !== null && poItemField) {
+                        if (defaults.purchase_order_item_id !== undefined && defaults
+                            .purchase_order_item_id !== null && poItemField) {
                             poItemField.value = String(defaults.purchase_order_item_id);
                         }
 
@@ -461,11 +495,14 @@
                             const qtyField = row.querySelector('[data-field="qty"]');
                             const returnedField = row.querySelector('[data-field="returned_qty"]');
                             const remarksField = row.querySelector('[data-field="remarks"]');
-                            const poItemField = row.querySelector('[data-field="purchase_order_item_id"]');
+                            const poItemField = row.querySelector(
+                                '[data-field="purchase_order_item_id"]');
 
                             const hasMaterial = materialField && materialField.value;
-                            const hasQty = qtyField && qtyField.value && parseFloat(qtyField.value) > 0;
-                            const hasReturned = returnedField && returnedField.value && parseFloat(returnedField.value) > 0;
+                            const hasQty = qtyField && qtyField.value && parseFloat(qtyField
+                                .value) > 0;
+                            const hasReturned = returnedField && returnedField.value && parseFloat(
+                                returnedField.value) > 0;
                             const hasRemarks = remarksField && remarksField.value.trim() !== '';
                             const hasPoItem = poItemField && poItemField.value;
 
@@ -525,43 +562,25 @@
                         });
                     }
 
-                    if (purchaseOrderSelect) {
+                    const isEditMode = container.dataset.editMode === '1';
+
+                    if (purchaseOrderSelect && !isEditMode) {
                         purchaseOrderSelect.addEventListener('change', () => {
                             const selectedId = purchaseOrderSelect.value;
-
-                            if (!selectedId) {
-                                previousOrderId = '';
-                                return;
-                            }
+                            if (!selectedId) return;
 
                             const order = purchaseOrdersData[selectedId];
-                            if (!order) {
-                                previousOrderId = selectedId;
-                                return;
-                            }
+                            if (!order) return;
 
                             if (hasFilledItems()) {
-                                const confirmReplace = window.confirm(
+                                const confirmReplace = confirm(
                                     'Mengambil item dari purchase order akan menggantikan daftar item saat ini. Lanjutkan?'
                                 );
-
-                                if (!confirmReplace) {
-                                    purchaseOrderSelect.value = previousOrderId;
-                                    return;
-                                }
+                                if (!confirmReplace) return;
                             }
 
                             populateFromOrder(order);
-                            previousOrderId = selectedId;
                         });
-
-                        if (purchaseOrderSelect.value && !hasFilledItems()) {
-                            const initialOrder = purchaseOrdersData[purchaseOrderSelect.value];
-                            if (initialOrder) {
-                                populateFromOrder(initialOrder);
-                                previousOrderId = purchaseOrderSelect.value;
-                            }
-                        }
                     }
 
                     if (tableBody.children.length === 0) {

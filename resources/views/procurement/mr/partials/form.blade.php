@@ -88,21 +88,6 @@
         @enderror
     </div>
 
-    <div class="col-md-4">
-        <label for="status" class="form-label">Status</label>
-        <select id="status" name="status" class="form-select @error('status') is-invalid @enderror" required>
-            @foreach ($statuses as $value => $label)
-                <option value="{{ $value }}"
-                    @selected((string) old('status', $requestModel->status ?? 'draft') === (string) $value)>
-                    {{ $label }}
-                </option>
-            @endforeach
-        </select>
-        @error('status')
-            <div class="invalid-feedback">{{ $message }}</div>
-        @enderror
-    </div>
-
     <div class="col-md-8">
         <label for="notes" class="form-label">Catatan</label>
         <textarea id="notes" name="notes" rows="3" class="form-control @error('notes') is-invalid @enderror"

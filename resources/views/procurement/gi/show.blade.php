@@ -12,17 +12,19 @@
                 <a href="{{ route('procurement.goods-issues.index') }}" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left me-2"></i>Kembali
                 </a>
-                <a href="{{ route('procurement.goods-issues.edit', $goodsIssue) }}" class="btn btn-outline-primary">
-                    <i class="bi bi-pencil me-2"></i>Ubah
-                </a>
-                <form action="{{ route('procurement.goods-issues.destroy', $goodsIssue) }}" method="POST"
-                    onsubmit="return confirm('Hapus goods issue ini?');">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-outline-danger">
-                        <i class="bi bi-trash me-2"></i>Hapus
-                    </button>
-                </form>
+                @if (auth()->user()->role->role_name === 'admin')
+                    <a href="{{ route('procurement.goods-issues.edit', $goodsIssue) }}" class="btn btn-outline-primary">
+                        <i class="bi bi-pencil me-2"></i>Ubah
+                    </a>
+                    <form action="{{ route('procurement.goods-issues.destroy', $goodsIssue) }}" method="POST"
+                        onsubmit="return confirm('Hapus goods issue ini?');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-outline-danger">
+                            <i class="bi bi-trash me-2"></i>Hapus
+                        </button>
+                    </form>
+                @endif
             </div>
         </header>
 
@@ -68,13 +70,14 @@
                         <dt class="text-muted">Tanggal Pengeluaran</dt>
                         <dd>
                             <div class="fs-5">{{ $issuedDate ?? 'Belum ditentukan' }}</div>
-                            <div class="text-muted small">{{ optional($goodsIssue->created_at)->format('H:i') }} WIB</div>
+                            <div class="text-muted small">{{ optional($goodsIssue->created_at)->format('H:i') }} WITA</div>
                         </dd>
                     </div>
                     <div class="col-md-4">
                         <dt class="text-muted">Petugas</dt>
                         <dd>
-                            <div class="fs-5 fw-semibold">{{ optional($goodsIssue->issuer)->name ?? 'Tidak diketahui' }}</div>
+                            <div class="fs-5 fw-semibold">{{ optional($goodsIssue->issuer)->name ?? 'Tidak diketahui' }}
+                            </div>
                             <div class="text-muted small">{{ optional($goodsIssue->issuer)->email ?? '-' }}</div>
                         </dd>
                     </div>
@@ -92,14 +95,14 @@
                         <dt class="text-muted">Dibuat</dt>
                         <dd>
                             <div>{{ optional($goodsIssue->created_at)->format('d M Y') }}</div>
-                            <div class="text-muted small">{{ optional($goodsIssue->created_at)->format('H:i') }} WIB</div>
+                            <div class="text-muted small">{{ optional($goodsIssue->created_at)->format('H:i') }} WITA</div>
                         </dd>
                     </div>
                     <div class="col-md-6">
                         <dt class="text-muted">Diperbarui Terakhir</dt>
                         <dd>
                             <div>{{ optional($goodsIssue->updated_at)->format('d M Y') }}</div>
-                            <div class="text-muted small">{{ optional($goodsIssue->updated_at)->format('H:i') }} WIB</div>
+                            <div class="text-muted small">{{ optional($goodsIssue->updated_at)->format('H:i') }} WITA</div>
                         </dd>
                     </div>
                 </dl>
@@ -134,7 +137,7 @@
                                         {{ number_format($item->qty, 2, ',', '.') }}
                                     </td>
                                     <td>
-                                        {{ optional($item->material?->unit)->symbol ?? optional($item->material?->unit)->name ?? '-' }}
+                                        {{ optional($item->material?->unit)->symbol ?? (optional($item->material?->unit)->name ?? '-') }}
                                     </td>
                                     <td>{{ $item->remarks ?? '-' }}</td>
                                 </tr>

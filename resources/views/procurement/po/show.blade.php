@@ -12,17 +12,37 @@
                 <a href="{{ route('procurement.purchase-orders.index') }}" class="btn btn-outline-secondary">
                     <i class="bi bi-arrow-left me-2"></i>Kembali
                 </a>
-                <a href="{{ route('procurement.purchase-orders.edit', $purchaseOrder) }}" class="btn btn-outline-primary">
-                    <i class="bi bi-pencil me-2"></i>Ubah
-                </a>
-                <form action="{{ route('procurement.purchase-orders.destroy', $purchaseOrder) }}" method="POST"
-                    onsubmit="return confirm('Hapus purchase order ini?');">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="btn btn-outline-danger">
-                        <i class="bi bi-trash me-2"></i>Hapus
-                    </button>
-                </form>
+                @if ($purchaseOrder->status === 'draft' && optional(auth()->user()->role)->role_name === 'admin')
+                    <form action="{{ route('procurement.purchase-orders.mark-ordered', $purchaseOrder) }}" method="POST"
+                        class="d-inline">
+                        @csrf
+                        @method('PATCH')
+                        <button class="btn btn-success">
+                            <i class="bi bi-check2-circle me-1"></i>Konfirmasi & Pesan
+                        </button>
+                    </form>
+                @endif
+                @if ($purchaseOrder->status === 'approved')
+                    <a href="{{ route('procurement.goods-receipts.create', $purchaseOrder) }}" class="btn btn-primary">
+                        <i class="bi bi-box-seam me-1"></i>Terima Barang
+                    </a>
+                @endif
+
+                @if ($purchaseOrder->status === 'draft' && optional(auth()->user()->role)->role_name === 'admin')
+                    <a href="{{ route('procurement.purchase-orders.edit', $purchaseOrder) }}"
+                        class="btn btn-outline-primary">
+                        <i class="bi bi-pencil me-2"></i>Ubah
+                    </a>
+
+                    <form action="{{ route('procurement.purchase-orders.destroy', $purchaseOrder) }}" method="POST"
+                        class="d-inline" onsubmit="return confirm('Hapus purchase order ini?');">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-outline-danger">
+                            <i class="bi bi-trash me-2"></i>Hapus
+                        </button>
+                    </form>
+                @endif
             </div>
         </header>
 
@@ -62,7 +82,8 @@
                             <dt class="col-sm-5 text-muted">Proyek</dt>
                             <dd class="col-sm-7">
                                 <div class="fw-semibold">{{ optional($purchaseOrder->project)->name ?? '-' }}</div>
-                                <div class="text-muted small">{{ optional($purchaseOrder->project)->code ?? 'Tidak ada kode' }}</div>
+                                <div class="text-muted small">
+                                    {{ optional($purchaseOrder->project)->code ?? 'Tidak ada kode' }}</div>
                             </dd>
 
                             <dt class="col-sm-5 text-muted">Permintaan Material</dt>
@@ -89,7 +110,8 @@
                             <dt class="col-sm-5 text-muted">Disetujui Oleh</dt>
                             <dd class="col-sm-7">
                                 @if ($purchaseOrder->approved_by)
-                                    <div class="fw-semibold">{{ optional($purchaseOrder->approver)->name ?? 'Tidak diketahui' }}</div>
+                                    <div class="fw-semibold">
+                                        {{ optional($purchaseOrder->approver)->name ?? 'Tidak diketahui' }}</div>
                                     <div class="text-muted small">
                                         {{ $purchaseOrder->approved_at?->format('d M Y H:i') ?? '-' }}
                                     </div>
@@ -130,13 +152,15 @@
                                     @forelse ($purchaseOrder->items as $item)
                                         @php
                                             $material = $item->material;
-                                            $unitLabel = $material && $material->unit
-                                                ? ($material->unit->symbol ?? $material->unit->name)
-                                                : null;
+                                            $unitLabel =
+                                                $material && $material->unit
+                                                    ? $material->unit->symbol ?? $material->unit->name
+                                                    : null;
                                         @endphp
                                         <tr>
                                             <td>
-                                                <div class="fw-semibold">{{ $material->name ?? 'Material tidak tersedia' }}</div>
+                                                <div class="fw-semibold">{{ $material->name ?? 'Material tidak tersedia' }}
+                                                </div>
                                                 @if ($unitLabel)
                                                     <div class="text-muted small">Satuan: {{ $unitLabel }}</div>
                                                 @endif

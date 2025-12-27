@@ -9,9 +9,11 @@
                 <p class="text-muted mb-0">Kelola pencatatan barang yang keluar dari gudang untuk proyek.</p>
             </div>
             <div class="d-flex gap-2">
-                <a href="{{ route('procurement.goods-issues.create') }}" class="btn btn-primary">
-                    <i class="bi bi-plus-lg me-2"></i>Tambah Goods Issue
-                </a>
+                @if (optional(auth()->user()->role)->role_name === 'operator')
+                    <a href="{{ route('procurement.goods-issues.create') }}" class="btn btn-primary">
+                        <i class="bi bi-plus-lg me-2"></i>Tambah Goods Issue
+                    </a>
+                @endif
             </div>
         </header>
 
@@ -85,8 +87,7 @@
                         <label for="per_page" class="form-label">Per Halaman</label>
                         <select id="per_page" name="per_page" class="form-select">
                             @foreach ([10, 25, 50, 100] as $size)
-                                <option value="{{ $size }}"
-                                    @selected((string) $size === (string) request('per_page', 10))>
+                                <option value="{{ $size }}" @selected((string) $size === (string) request('per_page', 10))>
                                     {{ $size }}
                                 </option>
                             @endforeach
@@ -151,7 +152,8 @@
                                         <div class="text-muted small">{{ optional($issue->project)->code ?? '-' }}</div>
                                     </td>
                                     <td>
-                                        <div class="fw-semibold">{{ optional($issue->issuer)->name ?? 'Tidak diketahui' }}</div>
+                                        <div class="fw-semibold">{{ optional($issue->issuer)->name ?? 'Tidak diketahui' }}
+                                        </div>
                                         <div class="text-muted small">{{ optional($issue->issuer)->email ?? '-' }}</div>
                                     </td>
                                     <td>
@@ -170,18 +172,22 @@
                                                 class="btn btn-sm btn-outline-secondary" title="Detail">
                                                 <i class="bi bi-eye"></i>
                                             </a>
-                                            <a href="{{ route('procurement.goods-issues.edit', $issue) }}"
-                                                class="btn btn-sm btn-outline-primary" title="Ubah">
-                                                <i class="bi bi-pencil"></i>
-                                            </a>
-                                            <form action="{{ route('procurement.goods-issues.destroy', $issue) }}" method="POST"
-                                                class="d-inline" onsubmit="return confirm('Hapus goods issue ini?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Hapus">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </form>
+                                            @if (optional(auth()->user()->role)->role_name === 'admin')
+                                                <a href="{{ route('procurement.goods-issues.edit', $issue) }}"
+                                                    class="btn btn-sm btn-outline-primary" title="Ubah">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                <form action="{{ route('procurement.goods-issues.destroy', $issue) }}"
+                                                    method="POST" class="d-inline"
+                                                    onsubmit="return confirm('Hapus goods issue ini?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                        title="Hapus">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>

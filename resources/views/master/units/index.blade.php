@@ -90,12 +90,12 @@
                                     </td>
                                     <td>
                                         <div>{{ optional($unit->created_at)->format('d M Y') }}</div>
-                                        <div class="text-muted small">{{ optional($unit->created_at)->format('H:i') }} WIB
+                                        <div class="text-muted small">{{ optional($unit->created_at)->format('H:i') }} WITA
                                         </div>
                                     </td>
                                     <td>
                                         <div>{{ optional($unit->updated_at)->format('d M Y') }}</div>
-                                        <div class="text-muted small">{{ optional($unit->updated_at)->format('H:i') }} WIB
+                                        <div class="text-muted small">{{ optional($unit->updated_at)->format('H:i') }} WITA
                                         </div>
                                     </td>
                                     <td class="text-end">

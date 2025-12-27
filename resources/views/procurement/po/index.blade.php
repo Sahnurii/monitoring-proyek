@@ -56,8 +56,7 @@
                         <select id="supplier_id" name="supplier_id" class="form-select">
                             <option value="">Semua Pemasok</option>
                             @foreach ($suppliers as $supplier)
-                                <option value="{{ $supplier->id }}"
-                                    @selected((string) $supplier->id === request('supplier_id'))>
+                                <option value="{{ $supplier->id }}" @selected((string) $supplier->id === request('supplier_id'))>
                                     {{ $supplier->name }}
                                 </option>
                             @endforeach
@@ -69,8 +68,7 @@
                         <select id="project_id" name="project_id" class="form-select">
                             <option value="">Semua Proyek</option>
                             @foreach ($projects as $project)
-                                <option value="{{ $project->id }}"
-                                    @selected((string) $project->id === request('project_id'))>
+                                <option value="{{ $project->id }}" @selected((string) $project->id === request('project_id'))>
                                     {{ $project->code }} &mdash; {{ $project->name }}
                                 </option>
                             @endforeach
@@ -82,8 +80,7 @@
                         <select id="material_request_id" name="material_request_id" class="form-select">
                             <option value="">Semua Permintaan</option>
                             @foreach ($materialRequests as $requestOption)
-                                <option value="{{ $requestOption->id }}"
-                                    @selected((string) $requestOption->id === request('material_request_id'))>
+                                <option value="{{ $requestOption->id }}" @selected((string) $requestOption->id === request('material_request_id'))>
                                     {{ $requestOption->code }}
                                 </option>
                             @endforeach
@@ -167,10 +164,12 @@
                                     </td>
                                     <td>
                                         <div class="fw-semibold">{{ optional($order->project)->name ?? '-' }}</div>
-                                        <div class="text-muted small">{{ optional($order->project)->code ?? 'Tidak ada kode' }}</div>
+                                        <div class="text-muted small">
+                                            {{ optional($order->project)->code ?? 'Tidak ada kode' }}</div>
                                     </td>
                                     <td>
-                                        <div class="fw-semibold">{{ optional($order->materialRequest)->code ?? '-' }}</div>
+                                        <div class="fw-semibold">{{ optional($order->materialRequest)->code ?? '-' }}
+                                        </div>
                                         <div class="text-muted small">
                                             @if ($order->material_request_id)
                                                 ID #{{ $order->material_request_id }}
@@ -196,19 +195,22 @@
                                                 class="btn btn-sm btn-outline-secondary" title="Detail">
                                                 <i class="bi bi-eye"></i>
                                             </a>
-                                            <a href="{{ route('procurement.purchase-orders.edit', $order) }}"
-                                                class="btn btn-sm btn-outline-primary" title="Ubah">
-                                                <i class="bi bi-pencil"></i>
-                                            </a>
-                                            <form action="{{ route('procurement.purchase-orders.destroy', $order) }}" method="POST"
-                                                class="d-inline"
-                                                onsubmit="return confirm('Hapus purchase order ini?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Hapus">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </form>
+                                            @if ($order->status === 'draft')
+                                                <a href="{{ route('procurement.purchase-orders.edit', $order) }}"
+                                                    class="btn btn-sm btn-outline-primary" title="Ubah">
+                                                    <i class="bi bi-pencil"></i>
+                                                </a>
+                                                <form action="{{ route('procurement.purchase-orders.destroy', $order) }}"
+                                                    method="POST" class="d-inline"
+                                                    onsubmit="return confirm('Hapus purchase order ini?');">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                        title="Hapus">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                            @endif
                                         </div>
                                     </td>
                                 </tr>

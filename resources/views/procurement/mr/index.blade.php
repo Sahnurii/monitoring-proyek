@@ -9,9 +9,11 @@
                 <p class="text-muted mb-0">Pantau dan kelola seluruh permintaan material proyek.</p>
             </div>
             <div class="d-flex gap-2">
-                <a href="{{ route('procurement.material-requests.create') }}" class="btn btn-primary">
-                    <i class="bi bi-plus-lg me-2"></i>Tambah Permintaan
-                </a>
+                @if (optional(auth()->user()->role)->role_name === 'operator')
+                    <a href="{{ route('procurement.material-requests.create') }}" class="btn btn-primary">
+                        <i class="bi bi-plus-lg me-2"></i>Tambah Permintaan
+                    </a>
+                @endif
             </div>
         </header>
 
@@ -84,7 +86,8 @@
                         <button type="submit" class="btn btn-outline-primary w-100">
                             <i class="bi bi-funnel me-2"></i>Terapkan
                         </button>
-                        <a href="{{ route('procurement.material-requests.index') }}" class="btn btn-outline-secondary w-100">
+                        <a href="{{ route('procurement.material-requests.index') }}"
+                            class="btn btn-outline-secondary w-100">
                             <i class="bi bi-arrow-counterclockwise me-2"></i>Reset
                         </a>
                     </div>
@@ -92,7 +95,6 @@
 
                 @php
                     $statusClasses = [
-                        'draft' => 'bg-secondary',
                         'submitted' => 'bg-info text-dark',
                         'approved' => 'bg-success',
                         'rejected' => 'bg-danger',
@@ -119,7 +121,8 @@
                         <tbody>
                             @forelse ($requests as $requestItem)
                                 @php
-                                    $statusLabel = $statuses[$requestItem->status] ?? ucfirst($requestItem->status ?? '');
+                                    $statusLabel =
+                                        $statuses[$requestItem->status] ?? ucfirst($requestItem->status ?? '');
                                     $badgeClass = $statusClasses[$requestItem->status] ?? 'bg-secondary';
                                     $requestDate = optional($requestItem->request_date)->format('d M Y');
                                 @endphp
@@ -133,15 +136,19 @@
                                     </td>
                                     <td>
                                         <div class="fw-semibold">{{ optional($requestItem->project)->name ?? '-' }}</div>
-                                        <div class="text-muted small">{{ optional($requestItem->project)->code ?? 'Tidak ada kode' }}</div>
+                                        <div class="text-muted small">
+                                            {{ optional($requestItem->project)->code ?? 'Tidak ada kode' }}</div>
                                     </td>
                                     <td>
-                                        <div class="fw-semibold">{{ optional($requestItem->requester)->name ?? 'Tidak diketahui' }}</div>
-                                        <div class="text-muted small">{{ optional($requestItem->requester)->email ?? '-' }}</div>
+                                        <div class="fw-semibold">
+                                            {{ optional($requestItem->requester)->name ?? 'Tidak diketahui' }}</div>
+                                        <div class="text-muted small">{{ optional($requestItem->requester)->email ?? '-' }}
+                                        </div>
                                     </td>
                                     <td>
                                         <div>{{ $requestDate ?? '-' }}</div>
-                                        <div class="text-muted small">{{ $requestItem->created_at?->format('H:i') ?? '' }}</div>
+                                        <div class="text-muted small">{{ $requestItem->created_at?->format('H:i') ?? '' }}
+                                        </div>
                                     </td>
                                     <td>
                                         <span class="badge {{ $badgeClass }}">{{ $statusLabel }}</span>
@@ -150,7 +157,8 @@
                                         <span class="fw-semibold">{{ $requestItem->items_count ?? 0 }}</span>
                                     </td>
                                     <td class="text-end">
-                                        <span class="fw-semibold">Rp {{ number_format((float) $requestItem->total_amount, 2, ',', '.') }}</span>
+                                        <span class="fw-semibold">Rp
+                                            {{ number_format((float) $requestItem->total_amount, 2, ',', '.') }}</span>
                                     </td>
                                     <td class="text-end">
                                         <div class="btn-group" role="group" aria-label="Aksi Permintaan">
@@ -158,11 +166,11 @@
                                                 class="btn btn-sm btn-outline-secondary" title="Detail">
                                                 <i class="bi bi-eye"></i>
                                             </a>
-                                            <a href="{{ route('procurement.material-requests.edit', $requestItem) }}"
+                                            {{-- <a href="{{ route('procurement.material-requests.edit', $requestItem) }}"
                                                 class="btn btn-sm btn-outline-primary" title="Ubah">
                                                 <i class="bi bi-pencil"></i>
-                                            </a>
-                                            <form action="{{ route('procurement.material-requests.destroy', $requestItem) }}"
+                                            </a> --}}
+                                            {{-- <form action="{{ route('procurement.material-requests.destroy', $requestItem) }}"
                                                 method="POST" class="d-inline"
                                                 onsubmit="return confirm('Hapus permintaan material ini?');">
                                                 @csrf
@@ -170,7 +178,7 @@
                                                 <button type="submit" class="btn btn-sm btn-outline-danger" title="Hapus">
                                                     <i class="bi bi-trash"></i>
                                                 </button>
-                                            </form>
+                                            </form> --}}
                                         </div>
                                     </td>
                                 </tr>
@@ -179,11 +187,14 @@
                                     <td colspan="9" class="text-center py-5">
                                         <i class="bi bi-box-seam text-muted display-5 d-block mb-3"></i>
                                         <p class="mb-1 fw-semibold">Belum ada permintaan material</p>
-                                        <p class="text-muted mb-3">Tambahkan permintaan baru untuk memulai proses pengadaan.</p>
-                                        <a href="{{ route('procurement.material-requests.create') }}"
-                                            class="btn btn-primary">
-                                            <i class="bi bi-plus-lg me-2"></i>Tambah Permintaan
-                                        </a>
+                                        <p class="text-muted mb-3">Tambahkan permintaan baru untuk memulai proses
+                                            pengadaan.</p>
+                                        @if (optional(auth()->user()->role)->role_name === 'operator')
+                                            <a href="{{ route('procurement.material-requests.create') }}"
+                                                class="btn btn-primary">
+                                                <i class="bi bi-plus-lg me-2"></i>Tambah Permintaan
+                                            </a>
+                                        @endif
                                     </td>
                                 </tr>
                             @endforelse
